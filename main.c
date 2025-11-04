@@ -1,5 +1,24 @@
 #include "raylib.h"
 
+typedef enum monstertype{
+     
+
+}
+
+
+typedef struct player{
+
+
+} player;
+
+typedef struct monster{
+
+}monster;
+
+typedef struct projectil{
+
+}projectil;
+
 int main(void)
 {
     // 1. Configuração da Janela

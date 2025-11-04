@@ -1,10 +1,10 @@
-# O nome do seu executável final
+# O nome do seu executável final (sem extensão)
 TARGET = game
 
 # O compilador C
 CC = gcc
 
-# Lista dos seus arquivos-fonte .c (por enquanto, só main.c)
+# Lista dos seus arquivos-fonte .c
 SRCS = main.c
 
 # Flags de compilação (avisos, padrão C99, debug)
@@ -15,23 +15,23 @@ UNAME_S := $(shell uname -s)
 
 # --- Configuração do macOS (Darwin) ---
 ifeq ($(UNAME_S),Darwin)
-    # Encontra onde o Homebrew (brew) instalou as coisas
-    BREW_PREFIX := $(shell brew --prefix)
+	CFLAGS += -I/usr/local/include
+	LDFLAGS = -L/usr/local/lib -lraylib -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL
+	EXECUTABLE = $(TARGET)
 
-    # Diz ao compilador onde achar o "raylib.h"
-    CFLAGS += -I$(BREM_PREFIX)/include
+# --- Configuração do Windows (MINGW) ---
+else ifneq ($(findstring MINGW,$(UNAME_S)),)
+	CFLAGS += -I/mingw64/include -DPLATFORM_DESKTOP
+	LDFLAGS = -L/mingw64/lib -lraylib -lopengl32 -lgdi32 -lwinmm
+	LDFLAGS += -mwindows 
+	EXECUTABLE = $(TARGET).exe
 
-    # Diz ao "linker" quais bibliotecas usar e onde achá-las
-    # ATENÇÃO: Seu Mac é mais antigo (macOS 12) e Intel,
-    # então o Homebrew instalou em /usr/local.
-    # Vamos forçar esse caminho para garantir.
-    LDFLAGS = -L/usr/local/lib -lraylib -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL
-
-# --- Configuração do Linux ---
+# --- Configuração do Linux (padrão) ---
 else
-    # Caminhos padrão do Linux
-    CFLAGS += -I/usr/include
-    LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+	# Agora aponta para /usr/local, assim como o Mac!
+	CFLAGS += -I/usr/local/include
+	LDFLAGS = -L/usr/local/lib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+	EXECUTABLE = $(TARGET)
 endif
 # ----------------------------------------
 
@@ -40,22 +40,19 @@ OBJS = $(SRCS:.c=.o)
 
 
 # --- REGRAS DE COMPILAÇÃO ---
+# Lembre-se: As linhas de comando devem começar com um TAB
 
-# Regra 'all': O que fazer quando você digita só 'make'
-all: $(TARGET)
+all: $(EXECUTABLE)
 
+$(EXECUTABLE): $(OBJS)
+	$(CC) $(OBJS) -o $(EXECUTABLE) $(LDFLAGS)
 
-$(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
-
-# Regra de Compilação: Como transformar qualquer .c em .o
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Regra 'clean': Limpa os arquivos compilados
 clean:
-	rm -f $(TARGET) $(OBJS)
+	# -f ignora erros se os arquivos não existirem
+	rm -f $(EXECUTABLE) $(OBJS)
 
-# Regra 'run': Compila E Roda o jogo
 run: all
-	./$(TARGET)
+	./$(EXECUTABLE)
