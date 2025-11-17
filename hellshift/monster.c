@@ -10,7 +10,7 @@ static MonsterNode *listaDeMonstros = NULL;
 
 // desenhar um monstro
 static void DrawOneMonster(Monster m) {
-    DrawCubeV((Vector3){m.position.x, m.position.y, 0.0f}, (Vector3){15, 15, 15}, m.color); 
+    DrawCubeV((Vector3){m.position.x, m.position.y, 0.0f}, (Vector3){15.0f, 15.0f, 15.0f}, m.color);
 }
 
 // da update em um monstro
@@ -98,13 +98,13 @@ void UnloadMonsters(void) {
 // ... (todas as suas funções existentes: DrawOne, UpdateOne, Spawn, Update, Draw, Unload) ...
 
 // NOVA FUNÇÃO PÚBLICA (Implementação da deleção de nó do monstro)
-bool CheckMonsterCollision(Rectangle rect) {
+int CheckMonsterCollision(Rectangle rect) {
     
-    ProjectilNode *prev = NULL;
-    ProjectilNode *current = listaDeMonstros;
+    MonsterNode *prev = NULL;
+    MonsterNode *current = listaDeMonstros;
 
     while (current != NULL) {
-        ProjectilNode *nextNode = current->next;
+        MonsterNode *nextNode = current->next;
         
         // Cria o "Hitbox" do monstro
         Rectangle monsterRect = {
@@ -130,7 +130,7 @@ bool CheckMonsterCollision(Rectangle rect) {
             }
             
             free(current); // Libera a memória do monstro
-            return true; // Retorna 'true' (um monstro foi atingido)
+            return 100; // Retorna 'true' (um monstro foi atingido)
         }
         
         // Avança na lista
@@ -138,5 +138,27 @@ bool CheckMonsterCollision(Rectangle rect) {
         current = nextNode;
     }
     
-    return false; // Nenhum monstro foi atingido
+    return 0; // Nenhum monstro foi atingido
+}
+
+bool CheckPlayerHit(Vector2 playerPosition, float playerRadius) {
+    MonsterNode *current = listaDeMonstros;
+    
+    while (current != NULL) {
+        // Hitbox do Monstro
+        Rectangle monsterRect = {
+            .x = current->data.position.x - 7.5f,
+            .y = current->data.position.y - 7.5f,
+            .width = 15,
+            .height = 15
+        };
+        
+        // Raylib tem função para checar Círculo com Retângulo!
+        if (CheckCollisionCircleRec(playerPosition, playerRadius, monsterRect)) {
+            return true; // Tocou!
+        }
+        
+        current = current->next;
+    }
+    return false;
 }

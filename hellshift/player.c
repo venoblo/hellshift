@@ -28,6 +28,19 @@ void UpdatePlayer(Player *p) { //aqui são funções do jogador, por agora to po
         Vector2 direcaoDoTiro = (Vector2){0.0f, -1.0f}; // Atira para cima
         SpawnProjectile(p->position, direcaoDoTiro);
     }
+
+    if (p->Cooldown > 0) {
+        p->Cooldown -= GetFrameTime();
+
+        if (((int)(p->damageCooldown * 10)) % 2 == 0) {
+            p->color = BLUE; // Cor normal
+        } else {
+            p->color = RED;  // Cor de dano
+        }
+    } else {
+        p->color = BLUE;
+    }    
+
 }
 
     // Adicionar lógica de colisão com o mapa aqui

@@ -1,6 +1,8 @@
 #include "projectile.h"
 #include "map.h"
 #include <stdlib.h> // Para malloc/free
+#include "monster.h" 
+#include "player.h"
 
 // A lista de projéteis
 static ProjectilNode *listaDeProjeteis = NULL;
@@ -38,7 +40,7 @@ void SpawnProjectile(Vector2 position, Vector2 direction) {
     listaDeProjeteis = novo;
 }
 
-void UpdateProjectiles(Map *map) {
+void UpdateProjectiles(Map *map, Player *p) {
 
     ProjectilNode *prev = NULL;
     ProjectilNode *current = listaDeProjeteis;

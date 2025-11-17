@@ -11,9 +11,13 @@ typedef struct Player{
     Vector2 position;
     float speed;
     int life;
+    int maxLife;
+    int score;
     Color color;
-    Class playerclass; // <-- NOVO CAMPO
+    Class playerclass;
+    float cooldown;
 } Player;
+
 void InitPlayer(Player *p);
 void UpdatePlayer(Player *p);
 void DrawPlayer(Player p);

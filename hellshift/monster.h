@@ -3,6 +3,10 @@
 
 #include "raylib.h"
 #include "player.h"
+#include <stdbool.h>
+
+// retorna verdadeiro se algum monstro atingiu o jogador
+bool CheckPlayerHit(Vector2 playerPosition, float playerRadius);
 
 typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro tem de por um desses aqui
     MONSTER_SLIME,
@@ -30,5 +34,7 @@ void UnloadMonsters(void);
 
 bool CheckMonsterHit(Projectil projectile);
 bool CheckMonsterCollision(Rectangle rect);
+int CheckMonsterCollision(Rectangle rect);
+bool CheckPlayerHit(Vector2 playerPosition, float playerRadius);
 
 #endif
