@@ -2,6 +2,9 @@
 #define PROJECTILE_H
 
 #include "raylib.h"
+#include "player.h" 
+
+typedef struct Map Map;
 
 typedef struct Projectil{
     Vector2 position;
@@ -23,7 +26,7 @@ typedef struct ProjectilNode {
 void SpawnProjectile(Vector2 position, Vector2 direction);
 
 // atualizar a posição de todos os projéteis
-void UpdateProjectiles(void);
+void UpdateProjectiles(Map *map, Player *p);
 
 // desenhar todos os projéteis na tela
 void DrawProjectiles(void);

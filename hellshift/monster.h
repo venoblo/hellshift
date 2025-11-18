@@ -4,6 +4,8 @@
 #include "raylib.h"
 #include "player.h"
 
+typedef struct Map Map;
+
 typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro tem de por um desses aqui
     MONSTER_SLIME,
     MONSTER_SKELETON,
@@ -24,11 +26,10 @@ typedef struct MonsterNode {
 } MonsterNode;
 
 void SpawnMonster(Vector2 position, MonsterType type);
-void UpdateMonsters(Player *player);
+void UpdateMonsters(Player *player, Map *map);
 void DrawMonsters(void);
 void UnloadMonsters(void);
 
-bool CheckMonsterHit(Projectil projectile);
 bool CheckMonsterCollision(Rectangle rect);
 
 #endif

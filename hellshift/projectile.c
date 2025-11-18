@@ -1,6 +1,8 @@
 #include "projectile.h"
 #include "map.h"
-#include <stdlib.h> // Para malloc/free
+#include "monster.h" 
+#include "player.h"
+#include <stdlib.h> 
 
 // A lista de projéteis
 static ProjectilNode *listaDeProjeteis = NULL;
@@ -38,21 +40,20 @@ void SpawnProjectile(Vector2 position, Vector2 direction) {
     listaDeProjeteis = novo;
 }
 
-void UpdateProjectiles(Map *map) {
+void UpdateProjectiles(Map *map, Player *p) {
 
     ProjectilNode *prev = NULL;
     ProjectilNode *current = listaDeProjeteis;
     
-   
     while (current != NULL) {
         UpdateOneProjectile(&(current->data));
         
-        // Guarda o próximo nó ANTES de potencialmente deletar o atual
         ProjectilNode *nextNode = current->next; 
 
-        // Checa colisão com o mapa
-        bool colidiumapa = CheckMapCollision(*map, current->data.position);
+        // 1. Checa colisão com o MAPA
+        bool colidiuComMapa = CheckMapCollision(*map, current->data.position);
 
+        // 2. Prepara Hitbox do Projétil
         Rectangle projRect = {
             .x = current->data.position.x - current->data.radius,
             .y = current->data.position.y - current->data.radius,
@@ -60,23 +61,29 @@ void UpdateProjectiles(Map *map) {
             .height = current->data.radius * 2
         };
         
-        // (Futuramente, adicione: OU colidiu com monstro)
+        // 3. Checa colisão com MONSTROS (Isso faltava!)
+        int pontosGanhos = CheckMonsterCollision(projRect);
         
-        if (colidiu) {
-            // Se colidiu, remove o nó da lista
-
+        // Se matou monstro, soma pontos no Player (Isso resolve o erro "unused p")
+        if (pontosGanhos > 0) {
+             p->score += pontosGanhos; 
+        }
+        
+        // 4. Verifica se deve destruir o projétil
+        // Se bateu no mapa OU ganhou pontos (acertou monstro)
+        if (colidiuComMapa || pontosGanhos > 0) {
+            
+            // Lógica de remoção da lista
             if (prev == NULL) {
-                // Caso 1: O nó a ser removido é o PRIMEIRO da lista
                 listaDeProjeteis = nextNode;
             } else {
-                // Caso 2: O nó está no meio ou fim da lista
                 prev->next = nextNode;
             }
             
-            free(current); // Libera a memória!
+            free(current); 
             
         } else {
-            // Se não colidiu, este nó se torna o "anterior" para a próxima iteração
+            // Se não colidiu, avança o prev
             prev = current;
         }
 
@@ -84,7 +91,6 @@ void UpdateProjectiles(Map *map) {
         current = nextNode;
     }
 }
-
 
 void DrawProjectiles(void) {
     ProjectilNode *current = listaDeProjeteis;
