@@ -2,6 +2,30 @@
 #include "projectile.h"
 #include "map.h"
 
+void InitPlayerClassStats(Player *p) {
+    // Garante que o score/cooldown sejam resetados antes de começar
+    p->score = 0;
+    p->damageCooldown = 0.0f;
+    p->ghost = false;
+
+    Color baseColor = p->color;
+
+    // Lógica SWITCH/CASE para aplicar as estatísticas
+    if (p->playerclass == CLASS_GUERREIRO) {
+        // Stats do Guerreiro (Tanque)
+        p->maxLife = 8;
+        p->life = 8;
+        p->speed = 2.0f; // Mais lento, mais durável
+        p->color = baseColor; // Mudar a cor para indicar a classe
+    } 
+    else if (p->playerclass == CLASS_MAGO) {
+        // Stats do Mago (Vidro/Dano)
+        p->maxLife = 4;
+        p->life = 4;
+        p->speed = 4.0f; // Mais rápido, menos vida
+        p->color = baseColor;
+    }
+}
 
 //update
 void UpdatePlayer(Player *p, Map *map) { //aqui são funções do jogador, por agora to pondo só movimento basico

@@ -52,7 +52,7 @@ void SpawnMonster(Vector2 position, MonsterType type) {
     listaDeMonstros = novoMonstro;
 }
 
-void UpdateMonsters(Player *player) {
+void UpdateMonsters(Player *player, Map *map) {
 
     MonsterNode *current = listaDeMonstros; // Começa no primeiro nó
     

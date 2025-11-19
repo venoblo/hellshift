@@ -4,11 +4,9 @@
 #include "raylib.h"
 #include "player.h"
 #include <stdbool.h>
+#include "map.h"
 
 // retorna verdadeiro se algum monstro atingiu o jogador
-bool CheckPlayerHit(Vector2 playerPosition, float playerRadius);
-
-typedef struct Map Map;
 
 typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro tem de por um desses aqui
     MONSTER_SLIME,
@@ -34,7 +32,7 @@ void UpdateMonsters(Player *player, Map *map);
 void DrawMonsters(void);
 void UnloadMonsters(void);
 
-bool CheckMonsterCollision(Rectangle rect);
+
 int CheckMonsterCollision(Rectangle rect);
 bool CheckPlayerHit(Vector2 playerPosition, float playerRadius);
 

@@ -3,8 +3,8 @@
 
 #include "raylib.h"
 #include "player.h" 
+#include "map.h"
 
-typedef struct Map Map;
 
 typedef struct Projectil{
     Vector2 position;

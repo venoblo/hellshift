@@ -2,8 +2,7 @@
 #define PLAYER_H
 #include "raylib.h"
 #include <stdbool.h>
-
-typedef struct Map Map;
+#include "map.h"
 
 typedef enum CharacterClass {
     CLASS_MAGO,
@@ -17,6 +16,7 @@ typedef struct Player{
     int maxLife;      
     int score;
     Color color;
+    Color originalColor;
     Class playerclass;
     
     KeyboardKey keyUp;
@@ -32,6 +32,7 @@ typedef struct Player{
 
 
 void InitPlayer(Player *p);
+void InitPlayerClassStats(Player *p);
 void UpdatePlayer(Player *p, Map *map);
 void DrawPlayer(Player p);
 

@@ -3,133 +3,212 @@
 #include "monster.h"    
 #include "projectile.h"
 #include "map.h"
+#include <stdio.h> 
 
 typedef enum GameScreen { 
-    SCREEN_MENU, 
+    SCREEN_NUM_PLAYERS, 
+    SCREEN_CLASS_SELECT, 
     SCREEN_GAMEPLAY,
     SCREEN_GAMEOVER 
 } GameScreen;
 
 Map mapa;
+int numPlayers = 1; 
+
+// Inicializa os jogadores (mantido como global)
+Player p1 = {
+    .position = (Vector2){300, 225}, .speed = 3.0f, .life = 5, .maxLife = 5, 
+    .score = 0, .color = BLUE, .playerclass = CLASS_MAGO, 
+    .ghost = false, .damageCooldown = 0, .ready = false,
+    .keyUp = KEY_W, .keyDown = KEY_S, .keyLeft = KEY_A, .keyRight = KEY_D, .keyAction = KEY_SPACE
+};
+
+Player p2 = {
+    .position = (Vector2){500, 225}, .speed = 3.0f, .life = 5, .maxLife = 5, 
+    .score = 0, .color = GREEN, .playerclass = CLASS_MAGO, 
+    .ghost = false, .damageCooldown = 0, .ready = false,
+    .keyUp = KEY_UP, .keyDown = KEY_DOWN, .keyLeft = KEY_LEFT, .keyRight = KEY_RIGHT, .keyAction = KEY_ENTER
+};
+
 
 int main(void)
 {
     const int screenWidth = 800;
     const int screenHeight = 450;
 
-    InitWindow(screenWidth, screenHeight, "Hellshift - Teste");
+    InitWindow(screenWidth, screenHeight, "Hellshift - Rodando!");
 
-    LoadMap(&mapa, "arena.txt");
+    LoadMap(&mapa, "level1.txt"); 
 
-    SetTargetFPS(60); // Define o FPS (Frames Per Second)
+    SetTargetFPS(60); 
 
-    GameScreen currentScreen = SCREEN_MENU;
+    GameScreen currentScreen = SCREEN_NUM_PLAYERS; 
 
-    // criar jogador 1
-    Player p1 = {
-        .position = (Vector2){300, 225},
-        .speed = 3.0f, 
-        .life = 5, 
-        .maxLife = 5, 
-        .score = 0, 
-        .color = BLUE, 
-        .ghost = false, 
-        .damageCooldown = 0,
-        // Controles P1
-        .keyUp = KEY_W, .keyDown = KEY_S, .keyLeft = KEY_A, .keyRight = KEY_D, 
-        .keyAction = KEY_SPACE
-    };
-
-    Player p2 = {
-        .position = (Vector2){500, 225},
-        .speed = 3.0f,
-        .life = 5, 
-        .maxLife = 5, 
-        .score = 0, 
-        .color = GREEN, 
-        .ghost = false, 
-        .damageCooldown = 0,
-        // Controles P2
-        .keyUp = KEY_UP, .keyDown = KEY_DOWN, .keyLeft = KEY_LEFT, .keyRight = KEY_RIGHT, 
-        .keyAction = KEY_ENTER
-    };
-
-
-
-
-    //Criar monstro
+    // Criar monstros 
     SpawnMonster((Vector2){100, 100}, MONSTER_SLIME);
     SpawnMonster((Vector2){200, 200}, MONSTER_ZOMBIE);
     SpawnMonster((Vector2){300, 100}, MONSTER_SKELETON);
 
-    // 2. Loop Principal do Jogo
-    while (!WindowShouldClose())    // Executa enquanto o usuário não fechar a janela
+    while (!WindowShouldClose())
     {
+        // ============================================================
+        // LÓGICA DO UPDATE (FLUXO DE ESTADOS)
+        // ============================================================
         
-        if (currentScreen == SCREEN_MENU) {
-            
+        if (currentScreen == SCREEN_NUM_PLAYERS) {
+            // Lógica de seleção de 1 ou 2 jogadores (HORIZONTAL)
+            if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_D) || IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) {
+                numPlayers = (numPlayers == 1) ? 2 : 1;
+            }
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                currentScreen = SCREEN_CLASS_SELECT;
+            }
+            // NOVO: ESC fecha o jogo se estiver na primeira tela
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                return 0; // Sai do main e fecha a janela
+            }
+        }
+        
+        else if (currentScreen == SCREEN_CLASS_SELECT) {
+            // NOVO: Voltar para a seleção de jogadores
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                currentScreen = SCREEN_NUM_PLAYERS;
+                // Reseta o estado dos jogadores para a próxima tentativa
+                p1.ready = false; 
+                p2.ready = false;
+            }
+
+            // --- LÓGICA DE ESCOLHA (JOGADOR 1) ---
             if (!p1.ready) {
-                if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_D)) {
-
-                    if (p1.playerclass == CLASS_MAGO) p1.playerclass = CLASS_GUERREIRO;
-                    else p1.playerclass = CLASS_MAGO;
+                if (IsKeyPressed(p1.keyLeft) || IsKeyPressed(p1.keyRight)) {
+                    p1.playerclass = (p1.playerclass == CLASS_MAGO) ? CLASS_GUERREIRO : CLASS_MAGO;
                 }
-                if (IsKeyPressed(KEY_SPACE)) p1.ready = true;
+                if (IsKeyPressed(p1.keyAction)) p1.ready = true;
             } else {
-                 if (IsKeyPressed(KEY_SPACE)) p1.ready = false;
+                 if (IsKeyPressed(p1.keyAction)) p1.ready = false; 
             }
 
-            // --- PLAYER 2 ESCOLHE ---
-            if (!p2.ready) {
-                if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) {
-                    // Alterna entre Mago e Guerreiro
-                    if (p2.playerclass == CLASS_MAGO) p2.playerclass = CLASS_GUERREIRO;
-                    else p2.playerclass = CLASS_MAGO;
+            // --- LÓGICA DE ESCOLHA (JOGADOR 2 - SÓ SE numPlayers == 2) ---
+            if (numPlayers == 2) {
+                if (!p2.ready) {
+                    if (IsKeyPressed(p2.keyLeft) || IsKeyPressed(p2.keyRight)) {
+                        p2.playerclass = (p2.playerclass == CLASS_MAGO) ? CLASS_GUERREIRO : CLASS_MAGO;
+                    }
+                    if (IsKeyPressed(p2.keyAction)) p2.ready = true;
+                } else {
+                    if (IsKeyPressed(p2.keyAction)) p2.ready = false; 
                 }
-                if (IsKeyPressed(KEY_ENTER)) p2.ready = true;
-            } else {
-                if (IsKeyPressed(KEY_ENTER)) p2.ready = false; // Cancelar pronto
             }
 
-            // SE AMBOS ESTIVEREM PRONTOS -> INICIAR JOGO
-            if (p1.ready && p2.ready) {
+            // --- TRANSIÇÃO PARA GAMEPLAY ---
+            if (p1.ready && (numPlayers == 1 || p2.ready)) {
+                InitPlayerClassStats(&p1); 
+                if (numPlayers == 2) {
+                    InitPlayerClassStats(&p2);
+                }
                 currentScreen = SCREEN_GAMEPLAY;
             }
         }
         
         else if (currentScreen == SCREEN_GAMEPLAY) {
+            // NOVO: Voltar para a seleção de classes
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                currentScreen = SCREEN_CLASS_SELECT;
+            }
+
+            // Movimento e Lógica de Jogo
             if (p1.life <= 0) p1.ghost = true;
             UpdatePlayer(&p1, &mapa);
-            
-            if (p2.life <= 0) p2.ghost = true;
-            UpdatePlayer(&p2, &mapa);
 
-            UpdateMonsters(&p1, &mapa);
-            UpdateProjectiles(&mapa, &p1); // Pontos vão pro P1 por enquanto
-            
-            if (p1.ghost && p2.ghost) {
-                // Game Over se os dois morrerem
-                // currentScreen = SCREEN_GAMEOVER;
+            if (numPlayers == 2) {
+                if (p2.life <= 0) p2.ghost = true;
+                UpdatePlayer(&p2, &mapa); // <-- CHAMA UPDATE P2
+            }
+
+            UpdateMonsters(&p1, &mapa); 
+            UpdateProjectiles(&mapa, &p1); 
+
+            if (p1.ghost && (numPlayers == 1 || p2.ghost)) {
+        
             }
         }
         
-
-
-
-
-
-        // --- DESENHO/DRAW (O que aparece na tela) ---
+        // ============================================================
+        // DESENHO/DRAW
+        // ============================================================
         BeginDrawing();
-
-            ClearBackground((Color){30, 30, 40, 255}); // Limpa a tela com a cor branca
-            DrawMap(mapa);
+            ClearBackground((Color){30, 30, 40, 255});
             
-            DrawText("Hellshift - teste", 190, 200, 20, LIGHTGRAY);
+            if (currentScreen == SCREEN_NUM_PLAYERS) {
+                // Desenho do menu principal (com seleção horizontal e setas)
+                int opt1X = 250; 
+                int opt2X = 500; 
+                int optY = 200;  
+                int arrowSize = 15;
+                
+                DrawText("HELLSHIFT - JOGADORES", screenWidth/2 - 250, 50, 40, WHITE);
+                
+                // MUDANÇA: Indicando controles horizontais
+                DrawText("A/D ou SETAS ESQ/DIR para alterar", screenWidth/2 - 250, 150, 20, GRAY);
+                
+                // --- DESENHO DAS DUAS OPÇÕES ---
+                DrawText("1 JOGADOR", opt1X, optY, 30, (numPlayers == 1) ? YELLOW : GRAY);
+                DrawText("2 JOGADORES", opt2X, optY, 30, (numPlayers == 2) ? YELLOW : GRAY);
+                
+                // --- DESENHO DO SELETOR (SETINHA) ---
+                int arrowX = (numPlayers == 1) ? opt1X : opt2X;
+                DrawTriangle(
+                    (Vector2){arrowX - 20, optY + arrowSize / 2},         
+                    (Vector2){arrowX - 35, optY - arrowSize + 5},         
+                    (Vector2){arrowX - 35, optY + arrowSize + 5},         
+                    RED
+                );
 
-            DrawPlayer(p1);
-            DrawPlayer(p2);
-            DrawMonsters();
-            DrawProjectiles();
+                DrawText("ENTER/ESPAÇO para continuar", screenWidth/2 - 250, 350, 20, GRAY);
+                DrawText("APERTE ESC PARA SAIR DO JOGO", screenWidth/2 - 150, screenHeight - 30, 20, LIGHTGRAY);
+            }
+            
+            else if (currentScreen == SCREEN_CLASS_SELECT) {
+                // Desenho do Menu de Classes (P1 e P2)
+                DrawText("P1 (A/D p/ classe)", 100, 100, 20, BLUE);
+                DrawText(p1.playerclass == CLASS_MAGO ? "MAGO" : "GUERREIRO", 100, 130, 20, YELLOW);
+                if (p1.ready) DrawText("PRONTO!", 100, 170, 20, GREEN);
+                DrawCircleV(p1.position, 20, p1.color);
+
+                if (numPlayers == 2) {
+                    DrawText("P2 (Setas E/D)", 500, 100, 20, GREEN);
+                    DrawText(p2.playerclass == CLASS_MAGO ? "MAGO" : "GUERREIRO", 500, 130, 20, YELLOW);
+                    if (p2.ready) DrawText("PRONTO!", 500, 170, 20, GREEN);
+                    DrawCircleV(p2.position, 20, p2.color);
+                } else {
+                     DrawText("JOGADOR 1: APERTE ESPAÇO P/ INICIAR", 150, 350, 20, GRAY);
+                }
+                
+                // NOVO: Instrução de voltar
+                DrawText("APERTE ESC PARA VOLTAR", screenWidth/2 - 150, screenHeight - 30, 20, LIGHTGRAY);
+            }
+
+
+            else if (currentScreen == SCREEN_GAMEPLAY) {
+                // Desenho do Jogo
+                DrawRectangle(0, 0, screenWidth, screenHeight, DARKGRAY); 
+                
+                // Desenho dos elementos do jogo (condicionais)
+                if (p1.life > 0 || p1.ghost) DrawPlayer(p1);
+                if (numPlayers == 2 && (p2.life > 0 || p2.ghost)) DrawPlayer(p2);
+                
+                DrawMonsters();
+                DrawProjectiles();
+                
+                // HUD
+                DrawText(TextFormat("P1: %d", p1.life), 10, 10, 20, BLUE);
+                if (numPlayers == 2) {
+                    DrawText(TextFormat("P2: %d", p2.life), screenWidth - 120, 10, 20, GREEN);
+                }
+                
+                // NOVO: Instrução de voltar
+                DrawText("APERTE ESC PARA VOLTAR AO MENU DE CLASSES", screenWidth/2 - 250, screenHeight - 30, 20, LIGHTGRAY);
+            }
 
         EndDrawing();
     }
@@ -137,8 +216,7 @@ int main(void)
     // 3. Finalização
     UnloadMonsters();
     UnloadProjectiles();
-    UnloadProjectiles();
-    CloseWindow(); // Fecha a janela e libera os recursos
+    CloseWindow(); 
 
     return 0;
 }
