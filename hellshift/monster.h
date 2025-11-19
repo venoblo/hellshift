@@ -3,6 +3,10 @@
 
 #include "raylib.h"
 #include "player.h"
+#include <stdbool.h>
+
+// retorna verdadeiro se algum monstro atingiu o jogador
+bool CheckPlayerHit(Vector2 playerPosition, float playerRadius);
 
 typedef struct Map Map;
 
@@ -31,5 +35,7 @@ void DrawMonsters(void);
 void UnloadMonsters(void);
 
 bool CheckMonsterCollision(Rectangle rect);
+int CheckMonsterCollision(Rectangle rect);
+bool CheckPlayerHit(Vector2 playerPosition, float playerRadius);
 
 #endif

@@ -30,6 +30,7 @@ typedef struct Player{
 
 } Player;
 
+
 void InitPlayer(Player *p);
 void UpdatePlayer(Player *p, Map *map);
 void DrawPlayer(Player p);

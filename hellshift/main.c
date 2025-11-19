@@ -137,6 +137,7 @@ int main(void)
     // 3. Finalização
     UnloadMonsters();
     UnloadProjectiles();
+    UnloadProjectiles();
     CloseWindow(); // Fecha a janela e libera os recursos
 
     return 0;

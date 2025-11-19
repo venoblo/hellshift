@@ -1,8 +1,8 @@
 #include "projectile.h"
 #include "map.h"
+#include <stdlib.h> // Para malloc/free
 #include "monster.h" 
 #include "player.h"
-#include <stdlib.h> 
 
 // A lista de projéteis
 static ProjectilNode *listaDeProjeteis = NULL;
