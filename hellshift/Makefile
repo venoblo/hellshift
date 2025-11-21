@@ -5,8 +5,7 @@ TARGET = hellshift
 CC = gcc
 
 # --- CORREÇÃO 1: LISTA DE TODOS OS ARQUIVOS .C ---
-SRCS = main.c player.c monster.c projectile.c map.c
-
+SRCS = main.c player.c monster.c projectile.c map.c save.c
 # Flags de compilação
 # Adicionado /opt/homebrew para Macs M1/M2/M3
 CFLAGS = -Wall -std=c99 -g -I/usr/local/include -I/opt/homebrew/include

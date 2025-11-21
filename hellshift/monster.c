@@ -3,8 +3,45 @@
 #include "raymath.h" 
 #include "player.h"
 #include "map.h"
+#include "save.h"
 
 static MonsterNode *listaDeMonstros = NULL;
+
+void ExportMonsters(SaveData *data) {
+    int count = 0;
+    MonsterNode *current = listaDeMonstros;
+    
+    // Percorre a lista e copia cada um para o array do SaveData
+    while (current != NULL && count < MAX_SAVED_MONSTERS) {
+        data->monsters[count].position = current->data.position;
+        data->monsters[count].type = (int)current->data.type;
+        data->monsters[count].life = current->data.life;
+        data->monsters[count].color = current->data.color;
+        data->monsters[count].speed = current->data.speed;
+        data->monsters[count].activeRange = current->data.activeRange;
+        
+        count++;
+        current = current->next;
+    }
+    data->monsterCount = count;
+}
+
+void ImportMonsters(SaveData data) {
+    UnloadMonsters(); // Limpa monstros existentes
+    
+    // Recria a lista a partir do array salvo
+    for (int i = 0; i < data.monsterCount; i++) {
+        SpawnMonster(data.monsters[i].position, (MonsterType)data.monsters[i].type);
+        
+        // Sobrescreve status base pelos salvos
+        if (listaDeMonstros != NULL) {
+            listaDeMonstros->data.life = data.monsters[i].life;
+            listaDeMonstros->data.color = data.monsters[i].color;
+            listaDeMonstros->data.speed = data.monsters[i].speed;
+            listaDeMonstros->data.activeRange = data.monsters[i].activeRange;
+        }
+    }
+}
 
 // Desenho melhorado para identificar quem é quem
 static void DrawOneMonster(Monster m) {

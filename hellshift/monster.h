@@ -9,6 +9,7 @@
 typedef struct Player Player;
 typedef struct Projectile Projectile;
 typedef struct Map Map;
+typedef struct SaveData;
 
 // retorna verdadeiro se algum monstro atingiu o jogador
 
@@ -45,6 +46,8 @@ int CheckMonsterCollision(Rectangle rect);
 bool CheckPlayerHit(Vector2 playerPosition, float playerRadius);
 int CheckMeleeAttack(Vector2 playerPos, float range, int damage);
 int GetMonsterCount(void);
+void ExportMonsters(struct SaveData *data);
+void ImportMonsters(struct SaveData data);
 
 
 

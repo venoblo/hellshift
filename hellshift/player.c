@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 void InitPlayerClassStats(Player *p) {
-    p->score = 0;
     p->damageCooldown = 0.0f;
     p->ghost = false;
     p->attackTimer = 0.0f; 
@@ -23,7 +22,7 @@ void InitPlayerClassStats(Player *p) {
         // Stats do Mago (Vidro/Dano)
         p->maxLife = 80;
         p->life = 80;
-        p->speed = 4.0f; // Mais rápido
+        p->speed = 2.5f; // Mais rápido
     }
     p->trapActive = false;
 }

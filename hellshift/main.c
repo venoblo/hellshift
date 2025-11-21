@@ -5,13 +5,20 @@
 #include "projectile.h"
 #include "map.h"
 #include <stdio.h> 
+#include "save.h"
+#include "string.h"
 
 typedef enum GameScreen { 
-    SCREEN_MAIN_MENU,     
+    SCREEN_MAIN_MENU,
+    SCREEN_SLOT_SELECT,
+    SCREEN_NAME_INPUT,     
+    SCREEN_CONFIRM_OVERWRITE, 
+    SCREEN_MSG_EMPTY,     
     SCREEN_SAVE_SELECT,   
     SCREEN_NUM_PLAYERS,   
     SCREEN_CLASS_SELECT,  
-    SCREEN_GAMEPLAY,      
+    SCREEN_GAMEPLAY,     
+    SCREEN_PAUSE, 
     SCREEN_OPTIONS,
     SCREEN_GAMEOVER,
     SCREEN_CREDITS
@@ -21,25 +28,93 @@ Map mapa;
 int numPlayers = 1; 
 int mainMenuSelection = 0; 
 int saveSlotSelection = 0; 
+int pausemenu = 0;
+
+bool level1Started = false;
+bool isSavingMode = false; // true = Salvar/Novo, false = Carregar
+bool isPauseMenu = false;
+
+char tempName[21] = "PLAYER"; 
+int letterCount = 6;
+int framesCounter = 0;
 
 #define MAP_OFFSET_X 0 
 #define MAP_OFFSET_Y 0 
 
-Player p1 = {
-    .position = (Vector2){350, 225}, 
-    .speed = 3.0f, .life = 100, .maxLife = 100, .score = 0, .color = BLUE, .originalColor = BLUE,
-    .playerclass = CLASS_MAGO, .ghost = false, .damageCooldown = 0, .ready = false,
-    .keyUp = KEY_W, .keyDown = KEY_S, .keyLeft = KEY_A, .keyRight = KEY_D, .keyAction = KEY_SPACE
-};
+// Players Globais para facilitar Save/Load
+Player p1, p2;
 
-Player p2 = {
-    .position = (Vector2){450, 225}, 
-    .speed = 3.0f, .life = 100, .maxLife = 100, .score = 0, .color = GREEN, .originalColor = GREEN,
-    .playerclass = CLASS_GUERREIRO, .ghost = false, .damageCooldown = 0, .ready = false,
-    .keyUp = KEY_UP, .keyDown = KEY_DOWN, .keyLeft = KEY_LEFT, .keyRight = KEY_RIGHT, .keyAction = KEY_ENTER
-};
+// Função Auxiliar para resetar jogadores
+void ResetPlayers() {
+    p1 = (Player){
+        .position = (Vector2){350, 225}, .speed = 3.0f, .life = 100, .maxLife = 100, 
+        .score = 0, .color = BLUE, .originalColor = BLUE, .playerclass = CLASS_MAGO, 
+        .ghost = false, .damageCooldown = 0, .ready = false,
+        .keyUp = KEY_W, .keyDown = KEY_S, .keyLeft = KEY_A, .keyRight = KEY_D, .keyAction = KEY_SPACE
+    };
+    p2 = (Player){
+        .position = (Vector2){450, 225}, .speed = 3.0f, .life = 100, .maxLife = 100, 
+        .score = 0, .color = GREEN, .originalColor = GREEN, .playerclass = CLASS_GUERREIRO, 
+        .ghost = false, .damageCooldown = 0, .ready = false,
+        .keyUp = KEY_UP, .keyDown = KEY_DOWN, .keyLeft = KEY_LEFT, .keyRight = KEY_RIGHT, .keyAction = KEY_ENTER
+    };
 
-bool level1Started = false;
+    level1Started = false;
+    UnloadMonsters();
+    UnloadProjectiles();
+}
+
+void PerformSave(int slot) {
+    SaveData data = {0};
+    strcpy(data.saveName, tempName);
+    
+    data.score = p1.score + p2.score;
+    data.numPlayers = numPlayers;
+    data.p1Class = (int)p1.playerclass;
+    data.p2Class = (int)p2.playerclass;
+    data.p1Life = p1.life;
+    data.p2Life = p2.life;
+    data.level = 1; 
+    
+    // SALVA SE O LEVEL JÁ COMEÇOU (Para não spawnar monstros default em cima dos salvos)
+    data.level1Started = level1Started;
+
+    // --- SALVA OS MONSTROS ---
+    ExportMonsters(&data);
+    
+    SaveGame(slot, data);
+}
+
+// Função para Aplicar o Save carregado no Jogo
+void ApplyLoadedGame(SaveData data) {
+    numPlayers = data.numPlayers;
+    ResetPlayers(); 
+    
+    p1.score = data.score; 
+    p1.playerclass = (Class)data.p1Class;
+    p1.life = data.p1Life; // Vida recuperada
+    
+    if (numPlayers == 2) {
+        p2.playerclass = (Class)data.p2Class;
+        p2.life = data.p2Life; // Vida recuperada
+    }
+    
+    InitPlayerClassStats(&p1); 
+    if (numPlayers == 2) InitPlayerClassStats(&p2);
+    
+    // IMPORTANTE: Sobrescreve a vida DEPOIS do Init (pois Init reseta para MaxLife)
+    p1.life = data.p1Life;
+    if (numPlayers == 2) p2.life = data.p2Life;
+
+    // --- CARREGA OS MONSTROS ---
+    ImportMonsters(data);
+    
+    // Recupera o estado do nível (para o main não spawnar monstros novos)
+    level1Started = data.level1Started; 
+
+    p1.position = (Vector2){350, 225}; // Ou você poderia salvar a posição exata na struct SaveData!
+    p2.position = (Vector2){450, 225};
+}
 
 int main(void)
 {
@@ -67,9 +142,161 @@ int main(void)
 
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 switch (mainMenuSelection) {
-                    case 0: currentScreen = SCREEN_SAVE_SELECT; break; 
+                    case 0: // NOVO JOGO
+                        isSavingMode = true; 
+                        isPauseMenu = false; 
+                        currentScreen = SCREEN_SLOT_SELECT; 
+                        break; 
+                    case 1: // CARREGAR JOGO
+                        isSavingMode = false; 
+                        isPauseMenu = false;
+                        currentScreen = SCREEN_SLOT_SELECT; 
+                        break; 
+                    case 2: currentScreen = SCREEN_OPTIONS; break;
+                    case 3: currentScreen = SCREEN_CREDITS; break;
                     case 4: CloseWindow(); break; 
-                    default: currentScreen = SCREEN_SAVE_SELECT; break;
+                }
+            }
+        }
+
+        // 2. SELEÇÃO DE SLOT (Genérica)
+        else if (currentScreen == SCREEN_SLOT_SELECT) {
+            if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) saveSlotSelection--;
+            if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) saveSlotSelection++;
+            if (saveSlotSelection < 0) saveSlotSelection = 2;
+            if (saveSlotSelection > 2) saveSlotSelection = 0;
+
+            // Voltar
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                if (isPauseMenu) currentScreen = SCREEN_PAUSE;
+                else currentScreen = SCREEN_MAIN_MENU;
+            }
+
+            // Confirmar Slot
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                bool exists = SaveExists(saveSlotSelection);
+
+                if (isSavingMode) { 
+                    // --- MODO SALVAR ---
+                    if (exists) {
+                        currentScreen = SCREEN_CONFIRM_OVERWRITE;
+                    } else {
+                        // Se veio do Pause e slot vazio -> Salva Direto (Mantém nome atual ou padrão)
+                        if (isPauseMenu) {
+                             PerformSave(saveSlotSelection);
+                             currentScreen = SCREEN_GAMEPLAY;
+                        } else {
+                            // Novo Jogo -> Vai digitar nome
+                            letterCount = 0;
+                            tempName[0] = '\0'; // Limpa nome
+                            currentScreen = SCREEN_NAME_INPUT; 
+                        }
+                    }
+                } else {
+                    // --- MODO CARREGAR ---
+                    if (exists) {
+                        if (isPauseMenu) {
+                            // Se estiver no pause, pergunta se quer carregar (perder progresso atual)
+                            currentScreen = SCREEN_CONFIRM_OVERWRITE; // Reutilizando tela de confirm
+                        } else {
+                            SaveData data = LoadGameData(saveSlotSelection);
+                            ApplyLoadedGame(data);
+                            currentScreen = SCREEN_GAMEPLAY;
+                        }
+                    } else {
+                        currentScreen = SCREEN_MSG_EMPTY;
+                    }
+                }
+            }
+        }
+
+
+        else if (currentScreen == SCREEN_NAME_INPUT) {
+            // Captura teclas
+            int key = GetCharPressed();
+            while (key > 0) {
+                if ((key >= 32) && (key <= 125) && (letterCount < 20)) {
+                    tempName[letterCount] = (char)key;
+                    tempName[letterCount+1] = '\0';
+                    letterCount++;
+                }
+                key = GetCharPressed();
+            }
+            if (IsKeyPressed(KEY_BACKSPACE)) {
+                letterCount--;
+                if (letterCount < 0) letterCount = 0;
+                tempName[letterCount] = '\0';
+            }
+
+            // Confirmar Nome
+            if (IsKeyPressed(KEY_ENTER)) {
+                // Inicia fluxo de criação de personagem
+                ResetPlayers();
+                // Salva o arquivo inicial com o nome escolhido
+                PerformSave(saveSlotSelection); 
+                currentScreen = SCREEN_NUM_PLAYERS;
+            }
+        }
+
+        
+        // --- CONFIRMA SOBRESCRITA ---
+        else if (currentScreen == SCREEN_CONFIRM_OVERWRITE) {
+            if (IsKeyPressed(KEY_S)) { // SIM
+                if (isSavingMode) {
+                    // Sobrescrever Save
+                    if (isPauseMenu) {
+                        // Pause: Salva estado atual
+                        PerformSave(saveSlotSelection); 
+                        currentScreen = SCREEN_GAMEPLAY;
+                    } else {
+                        // Novo Jogo: Vai para Input de Nome
+                        letterCount = 0; tempName[0] = '\0';
+                        currentScreen = SCREEN_NAME_INPUT;
+                    }
+                } else {
+                    // Carregar (Vindo do Pause)
+                    SaveData data = LoadGameData(saveSlotSelection);
+                    ApplyLoadedGame(data);
+                    currentScreen = SCREEN_GAMEPLAY;
+                }
+            }
+            if (IsKeyPressed(KEY_N) || IsKeyPressed(KEY_ESCAPE)) {
+                currentScreen = SCREEN_SLOT_SELECT;
+            }
+        }
+
+        // --- MENSAGEM SLOT VAZIO ---
+        else if (currentScreen == SCREEN_MSG_EMPTY) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE)) {
+                currentScreen = SCREEN_SLOT_SELECT;
+            }
+        }
+
+        // --- MENU DE PAUSA ---
+        else if (currentScreen == SCREEN_PAUSE) {
+            if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) pausemenu--;
+            if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) pausemenu++;
+            if (pausemenu < 0) pausemenu = 3;
+            if (pausemenu > 3) pausemenu = 0;
+
+            if (IsKeyPressed(KEY_ESCAPE)) currentScreen = SCREEN_GAMEPLAY; 
+
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                switch (pausemenu) {
+                    case 0: currentScreen = SCREEN_GAMEPLAY; break; 
+                    case 1: // SALVAR
+                        isSavingMode = true;
+                        isPauseMenu = true; // IMPORTANTE: Flag de Pause
+                        currentScreen = SCREEN_SLOT_SELECT;
+                        break;
+                    case 2: // CARREGAR
+                        isSavingMode = false;
+                        isPauseMenu = true;
+                        currentScreen = SCREEN_SLOT_SELECT;
+                        break;
+                    case 3: // MENU PRINCIPAL
+                        currentScreen = SCREEN_MAIN_MENU;
+                        break;
                 }
             }
         }
@@ -120,6 +347,8 @@ int main(void)
                 // Reset Pos
                 p1.position = (Vector2){350, 225};
                 p2.position = (Vector2){450, 225};
+
+                PerformSave(saveSlotSelection);
                 
                 currentScreen = SCREEN_GAMEPLAY;
             }
@@ -128,10 +357,7 @@ int main(void)
         else if (currentScreen == SCREEN_GAMEPLAY) {
             // ESC -> VOLTAR
             if (IsKeyPressed(KEY_ESCAPE)) {
-                p1.ready = false; p2.ready = false;
-                level1Started = false; 
-                UnloadMonsters(); 
-                currentScreen = SCREEN_CLASS_SELECT;
+                currentScreen = SCREEN_PAUSE; // <-- AGORA VAI PARA PAUSE
             }
 
             // Spawn Inicial
@@ -220,17 +446,70 @@ int main(void)
                     if (i == mainMenuSelection) DrawTriangle((Vector2){300, 160 + i*40}, (Vector2){290, 150 + i*40}, (Vector2){290, 170 + i*40}, RED);
                 }
             }
-            else if (currentScreen == SCREEN_SAVE_SELECT) {
-                DrawText("SELECIONE UM SLOT", 250, 50, 30, WHITE);
+            
+            else if (currentScreen == SCREEN_SLOT_SELECT) {
+                DrawText(isSavingMode ? "SALVAR JOGO" : "CARREGAR JOGO", 250, 50, 30, WHITE);
                 for (int i = 0; i < 3; i++) {
                     int posX = 100 + i * 200; 
                     Rectangle slotRect = {posX, 150, 150, 120};
+                    
+                    bool exists = SaveExists(i);
+                    SaveData data = {0};
+                    if (exists) data = LoadGameData(i);
+
                     if (i == saveSlotSelection) {
-                        DrawRectangleRec(slotRect, RED); DrawRectangleLinesEx(slotRect, 4, YELLOW);
+                        DrawRectangleRec(slotRect, RED); 
                     } else DrawRectangleRec(slotRect, DARKGRAY);
-                    DrawText(TextFormat("SLOT %d", i+1), posX + 40, 200, 20, WHITE);
+                    
+                    DrawText(TextFormat("SLOT %d", i+1), posX + 40, 160, 20, WHITE);
+                    if (exists) {
+                        DrawText(data.saveName, posX + 10, 190, 10, WHITE); // Nome do Save
+                        DrawText(data.dateBuffer, posX + 10, 210, 10, LIGHTGRAY);
+                        DrawText(TextFormat("Pts: %d", data.score), posX + 10, 230, 10, YELLOW);
+                    } else DrawText("VAZIO", posX + 50, 210, 20, GRAY);
                 }
-                DrawText("ENTER para confirmar", 300, 400, 20, GRAY);
+            }
+
+            else if (currentScreen == SCREEN_NAME_INPUT) {
+                DrawText("DIGITE O NOME DO SAVE", 220, 100, 30, WHITE);
+                
+                // Caixa de Texto
+                DrawRectangle(250, 200, 300, 50, DARKGRAY);
+                DrawRectangleLines(250, 200, 300, 50, WHITE);
+                
+                DrawText(tempName, 260, 210, 30, YELLOW);
+                
+                // Cursor Piscante
+                framesCounter++;
+                if ((framesCounter/30)%2 == 0) {
+                    DrawText("_", 260 + MeasureText(tempName, 30), 210, 30, YELLOW);
+                }
+                
+                DrawText("ENTER para confirmar", 300, 300, 20, GRAY);
+            }
+
+            else if (currentScreen == SCREEN_CONFIRM_OVERWRITE) {
+                DrawText("ATENCAO!", 320, 100, 40, RED);
+                if (isSavingMode) DrawText("Deseja SOBRESCREVER este save?", 220, 200, 20, WHITE);
+                else DrawText("Deseja CARREGAR este save?", 250, 200, 20, WHITE);
+                
+                DrawText("[S] SIM    [N] NAO", 300, 300, 20, YELLOW);
+            }
+
+            else if (currentScreen == SCREEN_MSG_EMPTY) {
+                DrawText("SLOT VAZIO!", 300, 200, 30, RED);
+                DrawText("Pressione ENTER", 320, 250, 20, GRAY);
+            }
+            
+            else if (currentScreen == SCREEN_PAUSE) {
+                DrawRectangle(0,0,screenWidth, screenHeight, (Color){0,0,0,200});
+                DrawText("PAUSA", 350, 50, 40, WHITE);
+                const char* pOptions[] = {"VOLTAR", "SALVAR JOGO", "CARREGAR JOGO", "SAIR P/ MENU"};
+                for (int i = 0; i < 4; i++) {
+                    Color c = (i == pausemenu) ? YELLOW : GRAY;
+                    DrawText(pOptions[i], 300, 150 + i*50, 20, c);
+                    if (i == pausemenu) DrawText(">", 280, 150 + i*50, 20, RED);
+                }
             }
             else if (currentScreen == SCREEN_NUM_PLAYERS) {
                 int opt1X = 250; int opt2X = 500; int optY = 200;  
