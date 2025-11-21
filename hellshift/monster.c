@@ -1,80 +1,104 @@
 #include "monster.h"
 #include <stdlib.h>
-#include "raymath.h"
+#include "raymath.h" 
 #include "player.h"
 #include "map.h"
 
-extern Map mapa;
-
 static MonsterNode *listaDeMonstros = NULL;
 
-// desenhar um monstro
+// Desenho melhorado para identificar quem é quem
 static void DrawOneMonster(Monster m) {
-    DrawCubeV((Vector3){m.position.x, m.position.y, 0.0f}, (Vector3){15.0f, 15.0f, 15.0f}, m.color);
+    if (m.type == MONSTER_SKELETON) {
+        // Esqueleto: Quadrado Bege
+        DrawRectangleV(m.position, (Vector2){30, 30}, BEIGE);
+        DrawRectangleLines(m.position.x, m.position.y, 30, 30, BLACK);
+    } else {
+        // Sombras: Quadrado Roxo Escuro
+        DrawRectangleV(m.position, (Vector2){30, 30}, PURPLE);
+    }
 }
 
-// da update em um monstro
-static void UpdateOneMonster(Monster *m, Vector2 playerPos) {
+static void UpdateOneMonster(Monster *m, Vector2 targetPos, Map *map) {
     
+    float distance = Vector2Distance(m->position, targetPos);
+
+    // IA DO ESQUELETO: Só persegue se estiver perto (< 250 pixels)
+    if (m->type == MONSTER_SKELETON && distance > 150.0f) {
+        return; // Fica parado esperando
+    }
+
+    // IA DAS SOMBRAS: Perseguem sempre
+    
+    // Movimento
     Vector2 oldPos = m->position;
-    // calcula o vetor de direção 
-    Vector2 direction = Vector2Subtract(playerPos, m->position);
-    
-    // normaliza o vetor
+    Vector2 direction = Vector2Subtract(targetPos, m->position);
     direction = Vector2Normalize(direction);
     
-    // move o monstro em direção ao jogador, multiplicado pela velocidade
+    // Move
     m->position.x += direction.x * m->speed;
     m->position.y += direction.y * m->speed;
 
-    if (CheckMapCollision(mapa, m->position)) {
+    // Colisão com Paredes (importante para eles não atravessarem tudo)
+    // Ajustamos o ponto de colisão para o centro do monstro (+15)
+    Vector2 centerPos = {m->position.x + 15, m->position.y + 15};
+    if (CheckMapCollision(*map, centerPos)) {
         m->position = oldPos;
     }
 }
 
 void SpawnMonster(Vector2 position, MonsterType type) {
-    // 1. Aloca memória para um novo NÓ
     MonsterNode *novoMonstro = (MonsterNode *)malloc(sizeof(MonsterNode));
-    if (novoMonstro == NULL) {
-        // Falha ao alocar memória!
-        return;
-    }
-
-    // 2. Preenche os dados (data) do monstro
+    if (novoMonstro == NULL) return;
+    
     novoMonstro->data.position = position;
     novoMonstro->data.type = type;
-    novoMonstro->data.life = 3;
-    novoMonstro->data.speed = 1.0f; // Dando uma velocidade padrão
-    novoMonstro->data.color = RED;
-
-    // 3. Insere o novo nó no INÍCIO da lista
+    
+    if (type == MONSTER_SKELETON) {
+        novoMonstro->data.life = 100;
+        novoMonstro->data.speed = 1.0f; 
+        novoMonstro->data.color = BEIGE;
+        novoMonstro->data.activeRange = 190.0f;
+    } else {
+        novoMonstro->data.life = 60;
+        novoMonstro->data.speed = 2.5f; 
+        novoMonstro->data.color = PURPLE;
+        novoMonstro->data.activeRange = 2000.0f;
+    }
+    
     novoMonstro->next = listaDeMonstros;
     listaDeMonstros = novoMonstro;
 }
 
-void UpdateMonsters(Player *player, Map *map) {
-
-    MonsterNode *current = listaDeMonstros; // Começa no primeiro nó
+void UpdateMonsters(Player *p1, Player *p2, int numPlayers, Map *map) {
+    MonsterNode *current = listaDeMonstros;
     
-    // "Enquanto não chegamos ao fim da lista..."
     while (current != NULL) {
-        // Atualiza o monstro atual
-        UpdateOneMonster(&(current->data), player->position);
+        // Lógica de Alvo (Targeting)
+        Vector2 targetPos = p1->position; 
+
+        if (numPlayers == 2) {
+            if (p1->ghost && !p2->ghost) targetPos = p2->position;
+            else if (!p1->ghost && !p2->ghost) {
+                float distP1 = Vector2DistanceSqr(current->data.position, p1->position);
+                float distP2 = Vector2DistanceSqr(current->data.position, p2->position);
+                if (distP2 < distP1) targetPos = p2->position;
+            }
+        }
         
-        // Avança para o próximo nó
+        // Adiciona um pequeno "jitter" (tremor) para eles não ficarem perfeitamente empilhados
+        // Se estiverem muito perto do alvo, param de andar
+        if (Vector2Distance(current->data.position, targetPos) > 10.0f) {
+             UpdateOneMonster(&(current->data), targetPos, map);
+        }
+       
         current = current->next;
     }
 }
 
 void DrawMonsters(void) {
-
     MonsterNode *current = listaDeMonstros;
-    // DrawCubeV(m.position, 15, m.color);
     while (current != NULL) {
-        // Desenha o monstro atual
         DrawOneMonster(current->data);
-        
-        // Avança para o próximo nó
         current = current->next;
     }
 }
@@ -82,23 +106,61 @@ void DrawMonsters(void) {
 void UnloadMonsters(void) {
     MonsterNode *current = listaDeMonstros;
     MonsterNode *next;
-
     while (current != NULL) {
         next = current->next; 
         free(current);        
         current = next;       
     }
-    
     listaDeMonstros = NULL;
 }
 
-#include "monster.h"
-// ... outros includes
-
-// ... (todas as suas funções existentes: DrawOne, UpdateOne, Spawn, Update, Draw, Unload) ...
-
-// NOVA FUNÇÃO PÚBLICA (Implementação da deleção de nó do monstro)
 int CheckMonsterCollision(Rectangle rect) {
+    MonsterNode *prev = NULL;
+    MonsterNode *current = listaDeMonstros;
+
+    while (current != NULL) {
+        MonsterNode *nextNode = current->next;
+        Rectangle monsterRect = {
+            .x = current->data.position.x,
+            .y = current->data.position.y,
+            .width = 30, .height = 30
+        };
+
+        if (CheckCollisionRecs(rect, monsterRect)) {
+            current->data.life -= 30;
+            if (prev == NULL) listaDeMonstros = nextNode;
+            else prev->next = nextNode;
+            free(current);
+            return 100;
+        }
+        prev = current;
+        current = nextNode;
+    }
+    return 0;
+}
+
+// CHECA SE O JOGADOR FOI ATINGIDO
+bool CheckPlayerHit(Vector2 playerPosition, float playerRadius) {
+    MonsterNode *current = listaDeMonstros;
+    while (current != NULL) {
+        // Hitbox do Monstro (Quadrado 30x30)
+        Rectangle monsterRect = {
+            .x = current->data.position.x,
+            .y = current->data.position.y,
+            .width = 30, .height = 30
+        };
+        
+        // A Raylib checa se o circulo do player encosta no quadrado do monstro
+        if (CheckCollisionCircleRec(playerPosition, playerRadius, monsterRect)) {
+            return true; // Bateu!
+        }
+        current = current->next;
+    }
+    return false;
+}
+
+int CheckMeleeAttack(Vector2 playerPos, float range, int damage) {
+    int totalScore = 0;
     
     MonsterNode *prev = NULL;
     MonsterNode *current = listaDeMonstros;
@@ -106,59 +168,59 @@ int CheckMonsterCollision(Rectangle rect) {
     while (current != NULL) {
         MonsterNode *nextNode = current->next;
         
-        // Cria o "Hitbox" do monstro
-        Rectangle monsterRect = {
-            .x = current->data.position.x - 7.5f, // (Metade de 15)
-            .y = current->data.position.y - 7.5f, // (Metade de 15)
-            .width = 15,
-            .height = 15
-        };
-
-        // CHECA A COLISÃO
-        if (CheckCollisionRecs(rect, monsterRect)) {
+        // Calcula a distância entre o monstro e o jogador
+        float dist = Vector2Distance(current->data.position, playerPos);
+        
+        // Se a distância for menor que o alcance (ex: 60px)
+        if (dist <= range) {
             // ACERTOU!
+            current->data.life -= damage; // Tira vida
             
-            // (Futuramente: current->data.life-- e só remove se a vida chegar a 0)
-            
-            // Remove o monstro da lista
-            if (prev == NULL) {
-                // É o primeiro da lista
-                listaDeMonstros = nextNode;
-            } else {
-                // Está no meio ou fim
-                prev->next = nextNode;
+            // Se a vida zerou, mata o monstro
+            if (current->data.life <= 0) {
+                if (prev == NULL) {
+                    listaDeMonstros = nextNode;
+                } else {
+                    prev->next = nextNode;
+                }
+                free(current);
+                totalScore += 100; // Soma pontos
+                
+                // Importante: Como removemos o nó atual, o 'prev' continua o mesmo
+                current = nextNode; 
+                continue; // Pula para a próxima iteração
             }
-            
-            free(current); // Libera a memória do monstro
-            return 100; // Retorna 'true' (um monstro foi atingido)
         }
         
-        // Avança na lista
         prev = current;
         current = nextNode;
     }
     
-    return 0; // Nenhum monstro foi atingido
+    return totalScore;
 }
 
-bool CheckPlayerHit(Vector2 playerPosition, float playerRadius) {
+int GetMonsterCount(void) {
+    int count = 0;
     MonsterNode *current = listaDeMonstros;
-    
     while (current != NULL) {
-        // Hitbox do Monstro
-        Rectangle monsterRect = {
-            .x = current->data.position.x - 7.5f,
-            .y = current->data.position.y - 7.5f,
-            .width = 15,
-            .height = 15
-        };
-        
-        // Raylib tem função para checar Círculo com Retângulo!
-        if (CheckCollisionCircleRec(playerPosition, playerRadius, monsterRect)) {
-            return true; // Tocou!
-        }
-        
+        count++;
         current = current->next;
     }
-    return false;
+    return count;
+}
+
+MonsterNode* GetClosestMonsterNode(Vector2 pos, float range) {
+    MonsterNode *closest = NULL;
+    float minDist = range; // Só pega se estiver dentro do range
+
+    MonsterNode *current = listaDeMonstros;
+    while (current != NULL) {
+        float dist = Vector2Distance(current->data.position, pos);
+        if (dist < minDist) {
+            minDist = dist;
+            closest = current;
+        }
+        current = current->next;
+    }
+    return closest;
 }

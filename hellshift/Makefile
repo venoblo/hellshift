@@ -1,42 +1,57 @@
-# Makefile - Versão FINAL, rodando DENTRO da pasta hellshift/
+# Nome do executável final
+TARGET = hellshift
 
-# Nome do executável final (Para evitar conflito com o nome da pasta)
-TARGET = hellshift_exec
-
-# Compilador C
+# O compilador C
 CC = gcc
 
-# 1. CORREÇÃO CRÍTICA: Arquivos de fonte estão no diretório atual (sem prefixo)
+# --- CORREÇÃO 1: LISTA DE TODOS OS ARQUIVOS .C ---
 SRCS = main.c player.c monster.c projectile.c map.c
+
+# Flags de compilação
+# Adicionado /opt/homebrew para Macs M1/M2/M3
+CFLAGS = -Wall -std=c99 -g -I/usr/local/include -I/opt/homebrew/include
+
+# --- DETECÇÃO DE SISTEMA OPERACIONAL ---
+UNAME_S := $(shell uname -s)
+
+# --- Configuração do macOS (Darwin) ---
+ifeq ($(UNAME_S),Darwin)
+    # --- CORREÇÃO 2: RPATH PARA NÃO TRAVAR AO ABRIR ---
+    LDFLAGS = -L/usr/local/lib -L/opt/homebrew/lib -lraylib \
+              -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm \
+              -Wl,-rpath,/usr/local/lib \
+              -Wl,-rpath,/opt/homebrew/lib \
+              -Wl,-rpath,/usr/local/opt/raylib/lib
+    EXECUTABLE = $(TARGET)
+
+# --- Configuração do Windows (MINGW) ---
+else ifneq ($(findstring MINGW,$(UNAME_S)),)
+    CFLAGS += -I/mingw64/include -DPLATFORM_DESKTOP
+    LDFLAGS = -L/mingw64/lib -lraylib -lopengl32 -lgdi32 -lwinmm -mwindows 
+    EXECUTABLE = $(TARGET).exe
+
+# --- Configuração do Linux ---
+else
+    LDFLAGS = -L/usr/local/lib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+    EXECUTABLE = $(TARGET)
+endif
+# ----------------------------------------
 
 # Converte a lista de .c em .o (arquivos-objeto)
 OBJS = $(SRCS:.c=.o)
 
-# Flags de compilação
-CFLAGS = -Wall -std=c99 -g -I/usr/local/include
-# Bibliotecas e Flags de Linkagem para Mac (Darwin)
-LDFLAGS = -L/usr/local/lib -L/opt/homebrew/lib -lraylib \
-        -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm \
-        -Wl,-rpath,/usr/local/lib \
-        -Wl,-rpath,/opt/homebrew/lib \
-        -Wl,-rpath,/usr/local/opt/raylib/lib
-		
+# --- REGRAS DE COMPILAÇÃO ---
 
-# ---------------- REGRAS PRINCIPAIS ----------------
+all: $(EXECUTABLE)
 
-all: $(TARGET)
+$(EXECUTABLE): $(OBJS)
+	$(CC) $(OBJS) -o $(EXECUTABLE) $(LDFLAGS)
 
-$(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
-
-# Regra para converter .c em .o (funciona agora pois o prefixo sumiu)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Regra para rodar: make run
-run: all
-	./$(TARGET)
-
-# Regra para limpar: make clean
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(EXECUTABLE) $(OBJS)
+
+run: all
+	./$(EXECUTABLE)

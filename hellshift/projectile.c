@@ -61,7 +61,7 @@ void UpdateProjectiles(Map *map, Player *p) {
             .height = current->data.radius * 2
         };
         
-        // 3. Checa colisão com MONSTROS (Isso faltava!)
+        
         int pontosGanhos = CheckMonsterCollision(projRect);
         
         // Se matou monstro, soma pontos no Player (Isso resolve o erro "unused p")

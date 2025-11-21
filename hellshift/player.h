@@ -27,6 +27,10 @@ typedef struct Player{
     bool ghost;          
     float damageCooldown;
     bool ready;
+    float attackTimer;
+    bool isPossessing;          // ta possuindo alguém?
+    void *possessedMonster;     // ponteiro para o monstro (void* para evitar ciclo, cast no .c)
+    bool trapActive;
 
 } Player;
 
