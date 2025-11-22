@@ -266,6 +266,8 @@ void LoadMap(Map *map, const char *fileName) {
     GenerateDungeonWithDifficulty(&map->dungeon);
 
     LoadRoomToMap(map);
+
+    map->dungeon.rooms[0].visited = true; // sala inicial mascada como visitada
 }
 
 void DrawMap(Map map) {
@@ -398,6 +400,9 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
     d->currentRoom = nextIndex;
     LoadRoomToMap(map);
 
+    //VERIFICA SE JÁ VISITOU A SALA
+    d->rooms[d->currentRoom].visited = true;
+
     // SPAWN DA NOVA SALA
     Room *newRoom = &d->rooms[d->currentRoom];
 
@@ -486,6 +491,28 @@ void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers) {
     }
 }
 
+
+Color GetRoomColor(Room *r, bool isCurrent)
+{
+    if (isCurrent) 
+        return BLUE;
+
+    if (!r->visited) 
+        return (Color){20, 20, 20, 255};
+
+    switch (r->type)
+    {
+        case ROOM_START:    return GREEN;
+        case ROOM_NORMAL:   return GRAY;
+        case ROOM_TREASURE: return GOLD;
+        case ROOM_BOSS:      return RED;
+        default:             return DARKGRAY;
+    }
+}
+
+// ===========
+// Minimapa
+// ===========
 void DrawMiniMap(Map *map, bool expanded)
 {
     Dungeon *d = &map->dungeon;
@@ -516,34 +543,31 @@ void DrawMiniMap(Map *map, bool expanded)
     {
         Room *r = &d->rooms[i];
 
-        if (!r->discovered)
+        if (!r->discovered){
             continue;
+        }
 
         int dx = r->gridX - current->gridX;
         int dy = r->gridY - current->gridY;
 
-        if (!expanded && (abs(dx) > viewDistance || abs(dy) > viewDistance))
+        if (!expanded && (abs(dx) > viewDistance || abs(dy) > viewDistance)){
             continue;
+        }
 
         int px = centerX + dx * (tileSize + 6) - tileSize/2;
         int py = centerY + dy * (tileSize + 6) - tileSize/2;
 
         if (px < originX || py < originY ||
             px + tileSize > originX + bgWidth ||
-            py + tileSize > originY + bgHeight)
+            py + tileSize > originY + bgHeight){
             continue;
+        }
 
-        Color color = DARKGRAY;
-
-        if (r->type == ROOM_START)    color = GREEN;
-        if (r->type == ROOM_NORMAL)   color = GRAY;
-        if (r->type == ROOM_TREASURE) color = GOLD;
-        if (r->type == ROOM_BOSS)     color = RED;
-        if (i == d->currentRoom)      color = BLUE;
-
+        Color color = GetRoomColor(r, i == d->currentRoom);
         DrawRectangle(px, py, tileSize, tileSize, color);
 
-        if (expanded)
+        if (expanded){
             DrawRectangleLines(px, py, tileSize, tileSize, BLACK);
+        }
     }
 }
