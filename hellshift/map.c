@@ -119,7 +119,21 @@ static void GenerateDungeon(Dungeon *d) {
     }
 
     // Última sala vira boss
-    d->rooms[d->roomCount - 1].type = ROOM_BOSS;
+    int bossIndex = 0;
+    int maxDist = 0;
+
+    for (int i = 0; i < d->roomCount; i++) {
+        int dist = abs(d->rooms[i].gridX) + abs(d->rooms[i].gridY);
+
+        if (dist > maxDist) {
+            maxDist = dist;
+            bossIndex = i;
+        }
+
+        d->rooms[i].type = ROOM_NORMAL;
+    }
+
+    d->rooms[bossIndex].type = ROOM_BOSS;
     d->rooms[d->roomCount - 1].cleared = false;
 
     for (int i = 0; i < d->roomCount; i++)
@@ -253,7 +267,7 @@ void LoadMap(Map *map, const char *fileName) {
 }
 
 void DrawMap(Map map) {
-    
+
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
 
@@ -345,6 +359,13 @@ void CheckRoomTransition(Map *map, Vector2 *p) {
 
     if (nextIndex == -1)
         return;
+
+    Room *targetRoom = &d->rooms[nextIndex];
+
+    // SE FOR BOSS E JÁ FOI CLEARED → BLOQUEIA
+    if (targetRoom->type == ROOM_BOSS && targetRoom->cleared) {
+        return;
+    }
 
     d->currentRoom = nextIndex;
     LoadRoomToMap(map);
