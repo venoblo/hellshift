@@ -392,6 +392,8 @@ int main(void)
                 UpdatePlayer(&p2, &mapa);
             }
 
+            CheckRoomTransition(&mapa, &p1.position);
+
             // --- DANOS E COLISÕES ---
             if (currentScreen == SCREEN_GAMEPLAY) { // Só processa se ainda estiver no jogo
                 if (!p1.ghost && p1.damageCooldown <= 0 && CheckPlayerHit(p1.position, 12.0f)) {

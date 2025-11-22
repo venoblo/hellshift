@@ -5,7 +5,7 @@ TARGET = game
 CC = gcc
 
 # Lista dos seus arquivos-fonte .c
-SRCS = main.c
+SRCS = main.c map.c player.c monster.c projectile.c save.c
 
 # Flags de compilação (avisos, padrão C99, debug)
 CFLAGS = -Wall -std=c99 -g
