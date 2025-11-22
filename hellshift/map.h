@@ -35,6 +35,7 @@ typedef struct {
     bool doorDown;
     bool doorLeft;
     bool doorRight;
+    bool portalActive;
 
     bool cleared;
 
@@ -46,6 +47,7 @@ typedef struct {
     Room rooms[MAX_ROOMS];
     int roomCount;
     int currentRoom;
+    int floorLevel;   // andar atual (1 - 7)
 } Dungeon;
 
 // A Struct do Map agora CONTÉM uma dungeon
@@ -64,5 +66,7 @@ bool CheckTrapInteraction(Map *map, Vector2 worldPos);
 
 // troca de sala ao passar pelas portas
 void CheckRoomTransition(Map *map, Vector2 *p);
+
+void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers);
 
 #endif

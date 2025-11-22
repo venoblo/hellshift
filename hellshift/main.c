@@ -415,6 +415,21 @@ int main(void)
 
                 UpdateMonsters(&p1, &p2, numPlayers, &mapa); 
                 UpdateProjectiles(&mapa, &p1);
+
+                // ================================
+                // IR PRO PRÓXIMO ANDAR (BOSS ROOM)
+                // ================================
+                Room *r = &mapa.dungeon.rooms[mapa.dungeon.currentRoom];
+
+                if (r->type == ROOM_BOSS && r->portalActive && IsKeyPressed(KEY_E)) {
+
+                    if (mapa.dungeon.floorLevel >= 7) {
+                        currentScreen = SCREEN_CREDITS;
+                    }
+                    else {
+                        GoToNextFloor(&mapa, &p1.position, &p2.position, numPlayers);
+                    }
+                }
             }
         }
         
@@ -541,7 +556,16 @@ int main(void)
                 DrawText(TextFormat("P1 HP: %d", p1.life), 10, 10, 20, BLUE);
                 if (numPlayers == 2) DrawText(TextFormat("P2 HP: %d", p2.life), screenWidth - 100, 10, 20, GREEN);
                 DrawText(TextFormat("Score: %d", p1.score + p2.score), 350, 10, 20, YELLOW);
-                if (GetMonsterCount() == 0) DrawText("PORTA ABERTA!", 350, 400, 20, ORANGE);
+                DrawText(TextFormat("FLOOR: %d / 7", mapa.dungeon.floorLevel), 340, 35, 20, RED);
+                if (GetMonsterCount() == 0) {
+
+                    Room *r = &mapa.dungeon.rooms[mapa.dungeon.currentRoom];
+
+                    if (r->type == ROOM_BOSS) {
+                    r->portalActive = true;
+                    DrawText("PRESSIONE [E] PARA DESCER", 280, 400, 20, ORANGE);
+                }
+            }
             }
             
             // --- DESENHO GAME OVER (AGORA VAI APARECER) ---

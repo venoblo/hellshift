@@ -1,5 +1,6 @@
 #include "map.h"
 #include "monster.h"
+#include "projectile.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,6 +128,116 @@ static void GenerateDungeon(Dungeon *d) {
     d->currentRoom = 0;
 }
 
+//Deixa mais hardcore tlgd (aumenta o numero de salas e inimigos)
+static void GenerateDungeonWithDifficulty(Dungeon *d) {
+
+    d->roomCount = 0;
+
+    int maxRooms = 7 + d->floorLevel * 2; 
+    if (maxRooms > MAX_ROOMS) maxRooms = MAX_ROOMS;
+
+    Room *start = &d->rooms[0];
+    memset(start, 0, sizeof(Room));
+    start->gridX = 0;
+    start->gridY = 0;
+    start->type = ROOM_START;
+    start->cleared = true;
+
+    d->roomCount = 1;
+
+    int attempts = 0;
+
+    while (d->roomCount < maxRooms && attempts < 200) {
+        attempts++;
+
+        int baseIndex = GetRandomValue(0, d->roomCount - 1);
+        Room *cur = &d->rooms[baseIndex];
+
+        int cx = cur->gridX;
+        int cy = cur->gridY;
+
+        int dir = GetRandomValue(0,3);
+        int nx = cx, ny = cy;
+
+        if (dir == 0) ny--;
+        if (dir == 1) ny++;
+        if (dir == 2) nx--;
+        if (dir == 3) nx++;
+
+        if (FindRoom(d, nx, ny) != -1)
+            continue;
+
+        Room *newRoom = &d->rooms[d->roomCount];
+        memset(newRoom, 0, sizeof(Room));
+
+        newRoom->gridX = nx;
+        newRoom->gridY = ny;
+        newRoom->cleared = false;
+
+        if (d->roomCount == maxRooms - 1)
+            newRoom->type = ROOM_BOSS;
+        else if (GetRandomValue(0, 10) > 8)
+            newRoom->type = ROOM_TREASURE;
+        else
+            newRoom->type = ROOM_NORMAL;
+
+        if (nx > cx) { cur->doorRight = true; newRoom->doorLeft = true; }
+        if (nx < cx) { cur->doorLeft  = true; newRoom->doorRight = true; }
+        if (ny > cy) { cur->doorDown  = true; newRoom->doorUp = true; }
+        if (ny < cy) { cur->doorUp    = true; newRoom->doorDown = true; }
+
+        d->roomCount++;
+    }
+
+    for(int i = 0; i < d->roomCount; i++)
+        BuildRoom(&d->rooms[i]);
+
+    d->currentRoom = 0;
+}
+
+// Spawna inimigos na sala atual, escalando com o andar
+static void SpawnRoomEnemies(Map *map) {
+
+    Dungeon *d = &map->dungeon;
+    Room *r = &d->rooms[d->currentRoom];
+
+    // START e TREASURE não tem inimigos
+    if (r->type == ROOM_START || r->type == ROOM_TREASURE) {
+        r->cleared = true;
+        return;
+    }
+
+    // Se já foi "limpa"/spawnda antes, não faz nada
+    if (r->cleared) return;
+
+    // Quantidade de inimigos cresce com o andar
+    int enemyCount = 2 + GetRandomValue(0, d->floorLevel);
+
+    for (int i = 0; i < enemyCount; i++) {
+        float px = GetRandomValue(80, 700);
+        float py = GetRandomValue(80, 400);
+
+        MonsterType tipo = MONSTER_SKELETON;
+
+        // Em andares mais altos, chance de sombras
+        if (d->floorLevel >= 3 && GetRandomValue(0, 10) > 7) {
+            tipo = MONSTER_SHADOW_MELEE;
+        }
+        if (d->floorLevel >= 5 && GetRandomValue(0, 10) > 8) {
+            tipo = MONSTER_SHADOW_SPELL;
+        }
+
+        // Boss room: garantimos um boss mais forte
+        if (r->type == ROOM_BOSS) {
+            tipo = (i == 0) ? MONSTER_SHADOW_MELEE : MONSTER_SHADOW_SPELL;
+        }
+
+        SpawnMonster((Vector2){px, py}, tipo);
+    }
+
+    r->cleared = true; // marca que essa sala já foi spawnda
+}
+
 
 /* =========================================
    Funções PÚBLICAS
@@ -134,12 +245,15 @@ static void GenerateDungeon(Dungeon *d) {
 
 void LoadMap(Map *map, const char *fileName) {
     (void)fileName;
-    GenerateDungeon(&map->dungeon);
+
+    map->dungeon.floorLevel = 1;       // começa no andar 1
+    GenerateDungeonWithDifficulty(&map->dungeon);
+
     LoadRoomToMap(map);
 }
 
 void DrawMap(Map map) {
-
+    
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
 
@@ -243,29 +357,31 @@ void CheckRoomTransition(Map *map, Vector2 *p) {
     else if (p->y > downLimit) { p->x = midX; p->y = TILE_SIZE * 2; }
     else if (p->y < upLimit) { p->x = midX; p->y = (MAP_HEIGHT - 3) * TILE_SIZE; }
 
-    // ================================
-    // SPAWN DE MONSTROS POR SALA
-    // ================================
-    if (!newRoom->cleared) {
+    // Agora spawna de acordo com o andar
+    SpawnRoomEnemies(map);
+    
+}
 
-        if (newRoom->type == ROOM_NORMAL) {
-            int qtd = GetRandomValue(3, 6);
+// ================================
+// AVANÇAR PARA O PRÓXIMO ANDAR
+// ================================
+void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers) {
+    
+    map->dungeon.floorLevel++;
 
-            for (int i = 0; i < qtd; i++) {
-                Vector2 pos = {
-                    GetRandomValue(80, 700),
-                    GetRandomValue(80, 400)
-                };
+    if (map->dungeon.floorLevel > 7)
+        return;
 
-                SpawnMonster(pos, MONSTER_SKELETON);
-            }
-        }
+    UnloadMonsters();
+    UnloadProjectiles();
 
-        else if (newRoom->type == ROOM_BOSS) {
-            SpawnMonster((Vector2){360, 200}, MONSTER_SHADOW_MELEE);
-            SpawnMonster((Vector2){400, 200}, MONSTER_SHADOW_SPELL);
-        }
+    GenerateDungeonWithDifficulty(&map->dungeon);
+    LoadRoomToMap(map);
 
-        newRoom->cleared = true;
+    // Reseta jogadores no centro
+    *p1Pos = (Vector2){350, 225};
+
+    if (numPlayers == 2 && p2Pos != NULL) {
+        *p2Pos = (Vector2){450, 225};
     }
 }
