@@ -13,6 +13,8 @@
 static void LoadRoomToMap(Map *map) {
     Room *r = &map->dungeon.rooms[map->dungeon.currentRoom];
 
+    r->visited = true;
+
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
             map->tiles[y][x] = r->tiles[y][x];
@@ -396,6 +398,21 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
     d->currentRoom = nextIndex;
     LoadRoomToMap(map);
 
+    // SPAWN DA NOVA SALA
+    Room *newRoom = &d->rooms[d->currentRoom];
+
+    newRoom->visited = true;
+    newRoom->discovered = true;
+
+    // Descobre salas adjacentes
+    for (int i = 0; i < d->roomCount; i++) {
+        Room *r = &d->rooms[i];
+
+        if (abs(r->gridX - newRoom->gridX) + abs(r->gridY - newRoom->gridY) == 1) {
+            r->discovered = true;
+        }
+    }
+
     int midX = (MAP_WIDTH  * TILE_SIZE) / 2;
     int midY = (MAP_HEIGHT * TILE_SIZE) / 2;
 
@@ -420,9 +437,6 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
         if (numPlayers == 2) 
             p2->position = (Vector2){midX + 40, (MAP_HEIGHT - 3) * TILE_SIZE};
     }
-
-    // SPAWN DA NOVA SALA
-    Room *newRoom = &d->rooms[d->currentRoom];
 
     if (!newRoom->cleared) {
         if (newRoom->type == ROOM_NORMAL) {
@@ -469,5 +483,67 @@ void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers) {
 
     if (numPlayers == 2 && p2Pos != NULL) {
         *p2Pos = (Vector2){450, 225};
+    }
+}
+
+void DrawMiniMap(Map *map, bool expanded)
+{
+    Dungeon *d = &map->dungeon;
+
+    int tileSize = expanded ? 16 : 6;
+    int margin = 15;
+
+    int bgWidth  = expanded ? 520 : 140;
+    int bgHeight = expanded ? 300 : 100;
+
+    int originX = expanded ? (GetScreenWidth()/2 - bgWidth/2) 
+                           : (GetScreenWidth() - bgWidth - margin);
+
+    int originY = expanded ? (GetScreenHeight()/2 - bgHeight/2) 
+                           : 60;
+
+    int centerX = originX + bgWidth/2;
+    int centerY = originY + bgHeight/2;
+
+    int viewDistance = expanded ? 999 : 1;
+
+    DrawRectangle(originX, originY, bgWidth, bgHeight, (Color){10,10,10,220});
+    DrawRectangleLines(originX, originY, bgWidth, bgHeight, RED);
+
+    Room *current = &d->rooms[d->currentRoom];
+
+    for (int i = 0; i < d->roomCount; i++)
+    {
+        Room *r = &d->rooms[i];
+
+        if (!r->discovered)
+            continue;
+
+        int dx = r->gridX - current->gridX;
+        int dy = r->gridY - current->gridY;
+
+        if (!expanded && (abs(dx) > viewDistance || abs(dy) > viewDistance))
+            continue;
+
+        int px = centerX + dx * (tileSize + 6) - tileSize/2;
+        int py = centerY + dy * (tileSize + 6) - tileSize/2;
+
+        if (px < originX || py < originY ||
+            px + tileSize > originX + bgWidth ||
+            py + tileSize > originY + bgHeight)
+            continue;
+
+        Color color = DARKGRAY;
+
+        if (r->type == ROOM_START)    color = GREEN;
+        if (r->type == ROOM_NORMAL)   color = GRAY;
+        if (r->type == ROOM_TREASURE) color = GOLD;
+        if (r->type == ROOM_BOSS)     color = RED;
+        if (i == d->currentRoom)      color = BLUE;
+
+        DrawRectangle(px, py, tileSize, tileSize, color);
+
+        if (expanded)
+            DrawRectangleLines(px, py, tileSize, tileSize, BLACK);
     }
 }

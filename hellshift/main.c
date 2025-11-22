@@ -118,6 +118,9 @@ void ApplyLoadedGame(SaveData data) {
 
 int main(void)
 {
+    Camera2D camera = {0};
+    camera.zoom = 1.0f;
+    camera.rotation = 0.0f;
     const int screenWidth = 800;
     const int screenHeight = 480;
 
@@ -392,6 +395,35 @@ int main(void)
                 UpdatePlayer(&p2, &mapa);
             }
 
+            Vector2 target = p1.position;
+
+            // Se houver 2 jogadores, centraliza entre eles
+            if (numPlayers == 2)
+                target = Vector2Lerp(p1.position, p2.position, 0.5f);
+
+            camera.target = target;
+
+            // Calcula distância entre players
+            float dist = Vector2Distance(p1.position, p2.position);
+
+            // Zoom dinâmico
+            if (numPlayers == 1) {
+                camera.zoom = 1.0f;
+            }
+            else {
+                float minZoom = 0.6f;
+                float maxZoom = 1.1f;
+
+                float newZoom = 1.2f - (dist / 700.0f);
+
+                if (newZoom < minZoom) newZoom = minZoom;
+                if (newZoom > maxZoom) newZoom = maxZoom;
+
+                camera.zoom = newZoom;
+            }
+
+            camera.offset = (Vector2){ GetScreenWidth()/2, GetScreenHeight()/2 };
+
             CheckRoomTransition(&mapa, &p1, &p2, numPlayers);
 
             // --- DANOS E COLISÕES ---
@@ -547,25 +579,42 @@ int main(void)
                     if (p2.ready) DrawText("OK", 550, 250, 20, GREEN);
                 }
             }
-            else if (currentScreen == SCREEN_GAMEPLAY) {
-                DrawMap(mapa); 
-                if (p1.life > 0 || p1.ghost) DrawPlayer(p1);
-                if (numPlayers == 2 && (p2.life > 0 || p2.ghost)) DrawPlayer(p2);
-                DrawMonsters();
-                DrawProjectiles();
-                DrawText(TextFormat("P1 HP: %d", p1.life), 10, 10, 20, BLUE);
-                if (numPlayers == 2) DrawText(TextFormat("P2 HP: %d", p2.life), screenWidth - 100, 10, 20, GREEN);
-                DrawText(TextFormat("Score: %d", p1.score + p2.score), 350, 10, 20, YELLOW);
-                DrawText(TextFormat("FLOOR: %d / 7", mapa.dungeon.floorLevel), 340, 35, 20, RED);
-                if (GetMonsterCount() == 0) {
+            else if (currentScreen == SCREEN_GAMEPLAY) 
+            {
+                // ---------- ÁREA DO MUNDO (com câmera) ----------
+                BeginMode2D(camera);
 
+                    DrawMap(mapa);
+
+                    if (p1.life > 0 || p1.ghost) DrawPlayer(p1);
+                    if (numPlayers == 2 && (p2.life > 0 || p2.ghost)) DrawPlayer(p2);
+
+                    DrawMonsters();
+                    DrawProjectiles();
+
+                EndMode2D();
+
+                // ---------- HUD (fora da câmera) ----------
+                bool isTab = IsKeyDown(KEY_TAB);
+                DrawMiniMap(&mapa, isTab);
+
+                DrawText(TextFormat("P1 HP: %d", p1.life), 10, 10, 20, BLUE);
+
+                if (numPlayers == 2)
+                    DrawText(TextFormat("P2 HP: %d", p2.life), screenWidth - 100, 10, 20, GREEN);
+
+                DrawText(TextFormat("Score: %d", p1.score + p2.score), 350, 10, 20, YELLOW);
+
+                DrawText(TextFormat("FLOOR: %d / 7", mapa.dungeon.floorLevel), 340, 35, 20, RED);
+
+                if (GetMonsterCount() == 0) {
                     Room *r = &mapa.dungeon.rooms[mapa.dungeon.currentRoom];
 
                     if (r->type == ROOM_BOSS) {
-                    r->portalActive = true;
-                    DrawText("PRESSIONE [E] PARA DESCER", 280, 400, 20, ORANGE);
+                        r->portalActive = true;
+                        DrawText("PRESSIONE [E] PARA DESCER", 280, 400, 20, ORANGE);
+                    }
                 }
-            }
             }
             
             // --- DESENHO GAME OVER (AGORA VAI APARECER) ---

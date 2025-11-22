@@ -38,8 +38,9 @@ typedef struct {
     bool doorLeft;
     bool doorRight;
     bool portalActive;
-
     bool cleared;
+    bool visited;
+    bool discovered;
 
     int tiles[MAP_HEIGHT][MAP_WIDTH];
 } Room;
@@ -70,5 +71,8 @@ bool CheckTrapInteraction(Map *map, Vector2 worldPos);
 void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers);
 
 void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers);
+
+// Minimapa
+void DrawMiniMap(Map *map, bool expanded);
 
 #endif
