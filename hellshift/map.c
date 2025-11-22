@@ -1,4 +1,5 @@
 #include "map.h"
+#include "monster.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,7 +33,7 @@ static void BuildRoom(Room *r) {
 
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            if (x == 0 || y == 0 || x == MAP_WIDTH-1 || y == MAP_HEIGHT-1)
+            if (x == 0 || y == 0 || x == MAP_WIDTH - 1 || y == MAP_HEIGHT - 1)
                 r->tiles[y][x] = TILE_WALL;
             else
                 r->tiles[y][x] = 0;
@@ -43,21 +44,25 @@ static void BuildRoom(Room *r) {
     int midY = MAP_HEIGHT / 2;
 
     if (r->doorUp)    r->tiles[0][midX] = TILE_DOOR;
-    if (r->doorDown)  r->tiles[MAP_HEIGHT-1][midX] = TILE_DOOR;
+    if (r->doorDown)  r->tiles[MAP_HEIGHT - 1][midX] = TILE_DOOR;
     if (r->doorLeft)  r->tiles[midY][0] = TILE_DOOR;
-    if (r->doorRight) r->tiles[midY][MAP_WIDTH-1] = TILE_DOOR;
+    if (r->doorRight) r->tiles[midY][MAP_WIDTH - 1] = TILE_DOOR;
 
     // Armadilhas aleatórias
     if (r->type == ROOM_NORMAL) {
-        for (int i = 0; i < 3; i++) {
-            int rx = GetRandomValue(2, MAP_WIDTH-3);
-            int ry = GetRandomValue(2, MAP_HEIGHT-3);
-            r->tiles[ry][rx] = TILE_TRAP;
+        int traps = GetRandomValue(1, 3);
+        for (int i = 0; i < traps; i++) {
+            int rx = GetRandomValue(2, MAP_WIDTH - 3);
+            int ry = GetRandomValue(2, MAP_HEIGHT - 3);
+
+            if (r->tiles[ry][rx] == 0)
+                r->tiles[ry][rx] = TILE_TRAP;
         }
     }
 }
 
-// Gera dungeon conectada
+
+// Gera dungeon ramificada
 static void GenerateDungeon(Dungeon *d) {
 
     d->roomCount = 0;
@@ -68,14 +73,19 @@ static void GenerateDungeon(Dungeon *d) {
     start->gridX = 0;
     start->gridY = 0;
     start->type = ROOM_START;
-
+    start->cleared = true; // nunca tem inimigos
     d->roomCount = 1;
-    int cx = 0, cy = 0;
-    int currentIndex = 0;
 
-    for (int i = 1; i < 8; i++) {
-        int dir = GetRandomValue(0,3);
-        int nx = cx, ny = cy;
+    int maxRooms = 12;
+
+    for (int i = 0; i < maxRooms; i++) {
+
+        int baseIndex = GetRandomValue(0, d->roomCount - 1);
+        Room *base = &d->rooms[baseIndex];
+
+        int dir = GetRandomValue(0, 3);
+        int nx = base->gridX;
+        int ny = base->gridY;
 
         if (dir == 0) ny--;
         if (dir == 1) ny++;
@@ -83,26 +93,33 @@ static void GenerateDungeon(Dungeon *d) {
         if (dir == 3) nx++;
 
         if (FindRoom(d, nx, ny) != -1) continue;
+        if (d->roomCount >= MAX_ROOMS) break;
 
         Room *newRoom = &d->rooms[d->roomCount];
         memset(newRoom, 0, sizeof(Room));
 
         newRoom->gridX = nx;
         newRoom->gridY = ny;
-        newRoom->type = (i == 7) ? ROOM_BOSS : ROOM_NORMAL;
+        newRoom->cleared = false;
 
-        Room *cur = &d->rooms[currentIndex];
+        int roll = GetRandomValue(0, 10);
 
-        if (nx > cx) { cur->doorRight = true; newRoom->doorLeft = true; }
-        if (nx < cx) { cur->doorLeft  = true; newRoom->doorRight = true; }
-        if (ny > cy) { cur->doorDown  = true; newRoom->doorUp = true; }
-        if (ny < cy) { cur->doorUp    = true; newRoom->doorDown = true; }
+        if (roll == 0)
+            newRoom->type = ROOM_TREASURE;
+        else
+            newRoom->type = ROOM_NORMAL;
 
-        cx = nx;
-        cy = ny;
-        currentIndex = d->roomCount;
+        if (dir == 0) { base->doorUp    = true; newRoom->doorDown  = true; }
+        if (dir == 1) { base->doorDown  = true; newRoom->doorUp    = true; }
+        if (dir == 2) { base->doorLeft  = true; newRoom->doorRight = true; }
+        if (dir == 3) { base->doorRight = true; newRoom->doorLeft  = true; }
+
         d->roomCount++;
     }
+
+    // Última sala vira boss
+    d->rooms[d->roomCount - 1].type = ROOM_BOSS;
+    d->rooms[d->roomCount - 1].cleared = false;
 
     for (int i = 0; i < d->roomCount; i++)
         BuildRoom(&d->rooms[i]);
@@ -110,12 +127,13 @@ static void GenerateDungeon(Dungeon *d) {
     d->currentRoom = 0;
 }
 
+
 /* =========================================
    Funções PÚBLICAS
 ========================================= */
 
 void LoadMap(Map *map, const char *fileName) {
-    (void)fileName; // não usa mais arquivo
+    (void)fileName;
     GenerateDungeon(&map->dungeon);
     LoadRoomToMap(map);
 }
@@ -174,75 +192,80 @@ bool CheckTrapInteraction(Map *map, Vector2 worldPos) {
 
         if (map->tiles[mapY][mapX] == TILE_TRAP) {
             map->tiles[mapY][mapX] = 0;
-
-            // Atualiza também a sala REAL
             map->dungeon.rooms[map->dungeon.currentRoom].tiles[mapY][mapX] = 0;
-
             return true;
         }
     }
+
     return false;
 }
 
 
-// MUDA DE SALA AO PASSAR NA PORTA
+// MUDA DE SALA + SPAWN DE MONSTROS
 void CheckRoomTransition(Map *map, Vector2 *p) {
 
     Dungeon *d = &map->dungeon;
     Room *r = &d->rooms[d->currentRoom];
 
-    int midX = MAP_WIDTH * TILE_SIZE / 2;
-    int midY = MAP_HEIGHT * TILE_SIZE / 2;
+    int midX = (MAP_WIDTH * TILE_SIZE) / 2;
+    int midY = (MAP_HEIGHT * TILE_SIZE) / 2;
 
-    // ---- DIREITA ----
-    if (r->doorRight && p->x > (MAP_WIDTH * TILE_SIZE) - (TILE_SIZE/2)) {
-        int idx = FindRoom(d, r->gridX + 1, r->gridY);
-        if (idx != -1) {
-            d->currentRoom = idx;
-            LoadRoomToMap(map);
+    int rightLimit = MAP_WIDTH * TILE_SIZE - 10;
+    int leftLimit = 10;
+    int downLimit = MAP_HEIGHT * TILE_SIZE - 10;
+    int upLimit = 10;
 
-            // Joga para dentro da nova sala (ESQUERDA)
-            p->x = TILE_SIZE * 2.5f;
-            p->y = midY;
+    int nextIndex = -1;
+
+    if (r->doorRight && p->x > rightLimit)
+        nextIndex = FindRoom(d, r->gridX + 1, r->gridY);
+
+    else if (r->doorLeft && p->x < leftLimit)
+        nextIndex = FindRoom(d, r->gridX - 1, r->gridY);
+
+    else if (r->doorDown && p->y > downLimit)
+        nextIndex = FindRoom(d, r->gridX, r->gridY + 1);
+
+    else if (r->doorUp && p->y < upLimit)
+        nextIndex = FindRoom(d, r->gridX, r->gridY - 1);
+
+    if (nextIndex == -1)
+        return;
+
+    d->currentRoom = nextIndex;
+    LoadRoomToMap(map);
+
+    Room *newRoom = &d->rooms[d->currentRoom];
+
+    // Teleporte seguro
+    if (p->x > rightLimit) { p->x = TILE_SIZE * 2; p->y = midY; }
+    else if (p->x < leftLimit) { p->x = (MAP_WIDTH - 3) * TILE_SIZE; p->y = midY; }
+    else if (p->y > downLimit) { p->x = midX; p->y = TILE_SIZE * 2; }
+    else if (p->y < upLimit) { p->x = midX; p->y = (MAP_HEIGHT - 3) * TILE_SIZE; }
+
+    // ================================
+    // SPAWN DE MONSTROS POR SALA
+    // ================================
+    if (!newRoom->cleared) {
+
+        if (newRoom->type == ROOM_NORMAL) {
+            int qtd = GetRandomValue(3, 6);
+
+            for (int i = 0; i < qtd; i++) {
+                Vector2 pos = {
+                    GetRandomValue(80, 700),
+                    GetRandomValue(80, 400)
+                };
+
+                SpawnMonster(pos, MONSTER_SKELETON);
+            }
         }
-    }
 
-    // ---- ESQUERDA ----
-    else if (r->doorLeft && p->x < TILE_SIZE/2) {
-        int idx = FindRoom(d, r->gridX - 1, r->gridY);
-        if (idx != -1) {
-            d->currentRoom = idx;
-            LoadRoomToMap(map);
-
-            // Joga para dentro da nova sala (DIREITA)
-            p->x = (MAP_WIDTH - 3.5f) * TILE_SIZE;
-            p->y = midY;
+        else if (newRoom->type == ROOM_BOSS) {
+            SpawnMonster((Vector2){360, 200}, MONSTER_SHADOW_MELEE);
+            SpawnMonster((Vector2){400, 200}, MONSTER_SHADOW_SPELL);
         }
-    }
 
-    // ---- BAIXO ----
-    else if (r->doorDown && p->y > (MAP_HEIGHT * TILE_SIZE) - (TILE_SIZE/2)) {
-        int idx = FindRoom(d, r->gridX, r->gridY + 1);
-        if (idx != -1) {
-            d->currentRoom = idx;
-            LoadRoomToMap(map);
-
-            // Joga para dentro da nova sala (CIMA)
-            p->x = midX;
-            p->y = TILE_SIZE * 2.5f;
-        }
-    }
-
-    // ---- CIMA ----
-    else if (r->doorUp && p->y < TILE_SIZE/2) {
-        int idx = FindRoom(d, r->gridX, r->gridY - 1);
-        if (idx != -1) {
-            d->currentRoom = idx;
-            LoadRoomToMap(map);
-
-            // Joga para dentro da nova sala (BAIXO)
-            p->x = midX;
-            p->y = (MAP_HEIGHT - 3.5f) * TILE_SIZE;
-        }
+        newRoom->cleared = true;
     }
 }

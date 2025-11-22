@@ -36,6 +36,8 @@ typedef struct {
     bool doorLeft;
     bool doorRight;
 
+    bool cleared;
+
     int tiles[MAP_HEIGHT][MAP_WIDTH];
 } Room;
 

@@ -361,13 +361,13 @@ int main(void)
             }
 
             // Spawn Inicial
-            if (!level1Started) {
-                SpawnMonster((Vector2){100, 100}, MONSTER_SKELETON);
-                SpawnMonster((Vector2){640, 120}, MONSTER_SKELETON);
-                SpawnMonster((Vector2){120, 350}, MONSTER_SKELETON);
-                SpawnMonster((Vector2){640, 200}, MONSTER_SKELETON);
-                level1Started = true;
-            }
+            //if (!level1Started) {
+            //    SpawnMonster((Vector2){100, 100}, MONSTER_SKELETON);
+            //    SpawnMonster((Vector2){640, 120}, MONSTER_SKELETON);
+            //    SpawnMonster((Vector2){120, 350}, MONSTER_SKELETON);
+            //    SpawnMonster((Vector2){640, 200}, MONSTER_SKELETON);
+            //    level1Started = true;
+            //}
 
             // --- LÓGICA DE VIDA E FANTASMA ---
             
