@@ -4,6 +4,8 @@
 #include "raylib.h"
 #include <stdbool.h>
 
+typedef struct Player Player;
+
 // tamanho do mapa (= tamanho de UMA SALA)
 #define MAP_WIDTH   20
 #define MAP_HEIGHT  12
@@ -65,7 +67,7 @@ bool CheckMapCollision(Map map, Vector2 worldPos);
 bool CheckTrapInteraction(Map *map, Vector2 worldPos);
 
 // troca de sala ao passar pelas portas
-void CheckRoomTransition(Map *map, Vector2 *p);
+void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers);
 
 void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers);
 

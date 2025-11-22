@@ -330,57 +330,122 @@ bool CheckTrapInteraction(Map *map, Vector2 worldPos) {
 
 
 // MUDA DE SALA + SPAWN DE MONSTROS
-void CheckRoomTransition(Map *map, Vector2 *p) {
+void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
+
+    char from = ' ';
 
     Dungeon *d = &map->dungeon;
     Room *r = &d->rooms[d->currentRoom];
 
-    int midX = (MAP_WIDTH * TILE_SIZE) / 2;
-    int midY = (MAP_HEIGHT * TILE_SIZE) / 2;
+    // Não pode sair se ainda tem inimigos
+    if (GetMonsterCount() > 0) return;
 
     int rightLimit = MAP_WIDTH * TILE_SIZE - 10;
-    int leftLimit = 10;
-    int downLimit = MAP_HEIGHT * TILE_SIZE - 10;
-    int upLimit = 10;
+    int leftLimit  = 10;
+    int downLimit  = MAP_HEIGHT * TILE_SIZE - 10;
+    int upLimit    = 10;
 
     int nextIndex = -1;
 
-    if (r->doorRight && p->x > rightLimit)
-        nextIndex = FindRoom(d, r->gridX + 1, r->gridY);
-
-    else if (r->doorLeft && p->x < leftLimit)
-        nextIndex = FindRoom(d, r->gridX - 1, r->gridY);
-
-    else if (r->doorDown && p->y > downLimit)
-        nextIndex = FindRoom(d, r->gridX, r->gridY + 1);
-
-    else if (r->doorUp && p->y < upLimit)
-        nextIndex = FindRoom(d, r->gridX, r->gridY - 1);
-
-    if (nextIndex == -1)
-        return;
-
-    Room *targetRoom = &d->rooms[nextIndex];
-
-    // SE FOR BOSS E JÁ FOI CLEARED → BLOQUEIA
-    if (targetRoom->type == ROOM_BOSS && targetRoom->cleared) {
-        return;
+    // Só jogador VIVO pode ativar porta
+    if (!p1->ghost) {
+        if (r->doorRight && p1->position.x > rightLimit) {
+            nextIndex = FindRoom(d, r->gridX + 1, r->gridY);
+            from = 'R';
+        }
+        else if (r->doorLeft && p1->position.x < leftLimit) {
+            nextIndex = FindRoom(d, r->gridX - 1, r->gridY);
+            from = 'L';
+        }
+        else if (r->doorDown && p1->position.y > downLimit) {
+            nextIndex = FindRoom(d, r->gridX, r->gridY + 1);
+            from = 'D';
+        }
+        else if (r->doorUp && p1->position.y < upLimit) {
+            nextIndex = FindRoom(d, r->gridX, r->gridY - 1);
+            from = 'U';
+        }
     }
 
+    // Em 2 jogadores, verifica também o P2
+    if (numPlayers == 2 && nextIndex == -1 && !p2->ghost) {
+        if (r->doorRight && p2->position.x > rightLimit) {
+            nextIndex = FindRoom(d, r->gridX + 1, r->gridY);
+            from = 'R';
+        }
+        else if (r->doorLeft && p2->position.x < leftLimit) {
+            nextIndex = FindRoom(d, r->gridX - 1, r->gridY);
+            from = 'L';
+        }
+        else if (r->doorDown && p2->position.y > downLimit) {
+            nextIndex = FindRoom(d, r->gridX, r->gridY + 1);
+            from = 'D';
+        }
+        else if (r->doorUp && p2->position.y < upLimit) {
+            nextIndex = FindRoom(d, r->gridX, r->gridY - 1);
+            from = 'U';
+        }
+    }
+
+    if (nextIndex == -1) return;
+
+    // LIMPA MONSTROS DA SALA ANTERIOR
+    UnloadMonsters();
+
+    // TROCA DE SALA
     d->currentRoom = nextIndex;
     LoadRoomToMap(map);
 
+    int midX = (MAP_WIDTH  * TILE_SIZE) / 2;
+    int midY = (MAP_HEIGHT * TILE_SIZE) / 2;
+
+    // TELEPORTA OS JOGADORES JUNTOS
+    if (from == 'R') {
+    p1->position = (Vector2){TILE_SIZE * 2, midY};
+    if (numPlayers == 2) 
+        p2->position = (Vector2){TILE_SIZE * 3, midY};
+    }
+    else if (from == 'L') {
+        p1->position = (Vector2){(MAP_WIDTH - 3) * TILE_SIZE, midY};
+        if (numPlayers == 2) 
+            p2->position = (Vector2){(MAP_WIDTH - 4) * TILE_SIZE, midY};
+    }
+    else if (from == 'D') {
+        p1->position = (Vector2){midX, TILE_SIZE * 2};
+        if (numPlayers == 2) 
+            p2->position = (Vector2){midX + 40, TILE_SIZE * 2};
+    }
+    else if (from == 'U') {
+        p1->position = (Vector2){midX, (MAP_HEIGHT - 3) * TILE_SIZE};
+        if (numPlayers == 2) 
+            p2->position = (Vector2){midX + 40, (MAP_HEIGHT - 3) * TILE_SIZE};
+    }
+
+    // SPAWN DA NOVA SALA
     Room *newRoom = &d->rooms[d->currentRoom];
 
-    // Teleporte seguro
-    if (p->x > rightLimit) { p->x = TILE_SIZE * 2; p->y = midY; }
-    else if (p->x < leftLimit) { p->x = (MAP_WIDTH - 3) * TILE_SIZE; p->y = midY; }
-    else if (p->y > downLimit) { p->x = midX; p->y = TILE_SIZE * 2; }
-    else if (p->y < upLimit) { p->x = midX; p->y = (MAP_HEIGHT - 3) * TILE_SIZE; }
+    if (!newRoom->cleared) {
+        if (newRoom->type == ROOM_NORMAL) {
+            int qtd = GetRandomValue(3, 6);
 
-    // Agora spawna de acordo com o andar
-    SpawnRoomEnemies(map);
-    
+            for (int i = 0; i < qtd; i++) {
+                SpawnMonster(
+                    (Vector2){
+                        GetRandomValue(60, 740),
+                        GetRandomValue(60, 420)
+                    },
+                    MONSTER_SKELETON
+                );
+            }
+        }
+
+        else if (newRoom->type == ROOM_BOSS) {
+            SpawnMonster((Vector2){360, 200}, MONSTER_SHADOW_MELEE);
+            SpawnMonster((Vector2){400, 200}, MONSTER_SHADOW_SPELL);
+        }
+
+        newRoom->cleared = true;
+    }
 }
 
 // ================================
