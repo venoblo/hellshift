@@ -17,7 +17,7 @@ typedef enum {
     PLAYER_HURT,
     PLAYER_DEATH,     
     PLAYER_REBIRTH,   
-    PLAYER_GHOST
+    PLAYER_GHOST_IDLE 
 } PlayerAnimState;
 
 typedef struct Player{

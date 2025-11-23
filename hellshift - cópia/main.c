@@ -378,7 +378,7 @@ int main(void)
             // PLAYER 1
             if (p1.life <= 0 && !p1.ghost) {
                 // Se ainda não começou a morrer, começa agora
-                if (p1.state != PLAYER_DEATH && p1.state != PLAYER_REBIRTH && p1.state != PLAYER_GHOST) {
+                if (p1.state != PLAYER_DEATH && p1.state != PLAYER_REBIRTH && p1.state != PLAYER_GHOST_IDLE) {
                     p1.state = PLAYER_DEATH;
                     p1.currentFrame = 0;
                     p1.frameTime = 0.0f;
@@ -392,7 +392,7 @@ int main(void)
 
             // PLAYER 2 (Se existir)
             if (numPlayers == 2 && p2.life <= 0 && !p2.ghost) {
-                if (p2.state != PLAYER_DEATH && p2.state != PLAYER_REBIRTH && p2.state != PLAYER_GHOST) {
+                if (p2.state != PLAYER_DEATH && p2.state != PLAYER_REBIRTH && p2.state != PLAYER_GHOST_IDLE) {
                     p2.state = PLAYER_DEATH;
                     p2.currentFrame = 0;
                     p2.frameTime = 0.0f;

@@ -15,7 +15,7 @@ int GetPlayerMaxFrames(Player p) {
         case PLAYER_HURT:       return 4; 
         case PLAYER_DEATH:      return 4; 
         case PLAYER_REBIRTH:    return 4; 
-        case PLAYER_GHOST: return 6; 
+        case PLAYER_GHOST_IDLE: return 6; 
         
         case PLAYER_ATTACK:
             // Diferencia frames de ataque por classe
@@ -138,7 +138,8 @@ void UpdatePlayer(Player *p, Map *map) { //aqui são funções do jogadoe
         if (p->position.x > 800) p->position.x = 800;
         if (p->position.y > 450) p->position.y = 450;
 
-        p->state = PLAYER_GHOST;
+        if (isMoving) p->state = PLAYER_WALK; 
+        else p->state = PLAYER_IDLE;
 
         if (IsKeyPressed(p->keyAction)) {
             // 1. Tenta Possuir
@@ -157,7 +158,7 @@ void UpdatePlayer(Player *p, Map *map) { //aqui são funções do jogadoe
                 // "causando dano no jogador que está vivo" -> Ok!
             }
         }    
-        return;
+
         
     }
     
@@ -259,7 +260,7 @@ void UpdatePlayer(Player *p, Map *map) { //aqui são funções do jogadoe
             }
             else if (p->state == PLAYER_REBIRTH) {
                 p->ghost = true;        
-                p->state = PLAYER_GHOST; 
+                p->state = PLAYER_GHOST_IDLE; 
                 p->life = 0;            
                 p->currentFrame = 0;
             }
@@ -311,7 +312,10 @@ void DrawPlayer(Player p) {
     if (p.isPossessing) return;
 
    // --- fantasma ---
-    
+    if (p.ghost && p.state != PLAYER_GHOST_IDLE) {
+    DrawCircleV(p.position, 12, Fade(p.color, 0.3f));
+    return;
+    }
     // --- GUERREIRO ---
     
     Texture2D texToDraw;
@@ -341,7 +345,7 @@ void DrawPlayer(Player p) {
                 
             }
             break;
-        case PLAYER_GHOST: texToDraw = p.texIdle;    stateName = "GHOST"; break;
+        case PLAYER_GHOST_IDLE: texToDraw = p.texIdle;    stateName = "GHOST"; break;
         default:                texToDraw = p.texIdle;    break;
     }
 
@@ -387,10 +391,10 @@ void DrawPlayer(Player p) {
     
     Color drawColor = WHITE;
 
-    if (p.state == PLAYER_GHOST) {
-    drawColor = ColorAlpha(WHITE, 0.6f);
+    if (p.ghost) {
+        // fantasma fica transparente 
+        drawColor = ColorAlpha(WHITE, 0.6f);
     }
-
     else if (p.damageCooldown > 0 && p.state != PLAYER_HURT) {
         if (((int)(p.damageCooldown * 10)) % 2 != 0) {
             drawColor = RED;
