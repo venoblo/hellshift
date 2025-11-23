@@ -376,7 +376,7 @@ int main(void)
             
             // 1 PLAYER: Morte = Game Over Direto
             // PLAYER 1
-            if (p1.life <= 0 && !p1.ghost) {
+            if (p1.life <= 0 && !p1.ghost && !p1.isPossessing) {
                 // Se ainda não começou a morrer, começa agora
                 if (p1.state != PLAYER_DEATH && p1.state != PLAYER_REBIRTH && p1.state != PLAYER_GHOST) {
                     p1.state = PLAYER_DEATH;
@@ -391,7 +391,7 @@ int main(void)
             }
 
             // PLAYER 2 (Se existir)
-            if (numPlayers == 2 && p2.life <= 0 && !p2.ghost) {
+            if (numPlayers == 2 && p2.life <= 0 && !p2.ghost && !p2.isPossessing) {
                 if (p2.state != PLAYER_DEATH && p2.state != PLAYER_REBIRTH && p2.state != PLAYER_GHOST) {
                     p2.state = PLAYER_DEATH;
                     p2.currentFrame = 0;
@@ -403,23 +403,26 @@ int main(void)
                 }
             }
 
+
             // --- 2. CHECAGEM DE GAME OVER ---
             bool gameOver = false;
 
+            bool p1Out = (p1.ghost || p1.isPossessing);  // isPossessing só acontece quando já era fantasma
+            bool p2Out = (p2.ghost || p2.isPossessing);
+
             if (numPlayers == 1) {
-                if (p1.ghost) gameOver = true;
-            } 
-            else {
-                
-                if (p1.ghost && p2.ghost) gameOver = true;
+                if (p1Out) gameOver = true;
+            } else {
+                if (p1Out && p2Out) gameOver = true;
             }
 
             if (gameOver) {
                 currentScreen = SCREEN_GAMEOVER;
             }
 
-            UpdatePlayer(&p1, &mapa);
-            if (numPlayers == 2) UpdatePlayer(&p2, &mapa);
+            UpdatePlayer(&p1, &mapa, (numPlayers == 2 ? &p2 : NULL));
+            if (numPlayers == 2) UpdatePlayer(&p2, &mapa, &p1);
+
             
             Vector2 target = p1.position;
 
@@ -454,10 +457,56 @@ int main(void)
 
             // --- DANOS E COLISÕES ---
             if (currentScreen == SCREEN_GAMEPLAY) { // Só processa se ainda estiver no jogo
-                float hitRadius = 40.0f; 
+                
 
-                // CORREÇÃO CRUCIAL: Adicionei "p1.life > 0"
-                // O jogador SÓ leva dano/stun se estiver VIVO.
+                // -------- DANO MANUAL DO POSSUÍDO (sem IA) --------
+                if (numPlayers == 2) {
+
+                    // P1 possuindo ataca P2
+                    if (p1.isPossessing) {
+                        MonsterNode *m = (MonsterNode*)p1.possessedMonster;
+                        if (m != NULL && m->data.state == MONSTER_ATTACK && p2.life > 0 && !p2.ghost && p2.damageCooldown <= 0) {
+
+                            Vector2 monsterCenter = { m->data.position.x + 15, m->data.position.y + 15 };
+                            float dist = Vector2Distance(monsterCenter, p2.position);
+
+                            // mesmo critério do CheckPlayerHit: playerRadius(40) + monsterRadius(15)
+                            if (dist < (40.0f + 15.0f)) {
+                                p2.life -= 20;
+                                p2.damageCooldown = 0.6f; 
+
+                                if (p2.playerclass == CLASS_GUERREIRO) {
+                                    p2.state = PLAYER_HURT;
+                                    p2.currentFrame = 0;
+                                    p2.frameTime = 0.0f;
+                                }
+                            }
+                        }
+                    }
+
+                    // P2 possuindo ataca P1
+                    if (p2.isPossessing) {
+                        MonsterNode *m = (MonsterNode*)p2.possessedMonster;
+                        if (m != NULL && m->data.state == MONSTER_ATTACK && p1.life > 0 && !p1.ghost) {
+
+                            Vector2 monsterCenter = { m->data.position.x + 15, m->data.position.y + 15 };
+                            float dist = Vector2Distance(monsterCenter, p1.position);
+
+                            if (dist < (40.0f + 15.0f)) {
+                                p1.life -= 20;
+                                p1.damageCooldown = 1.0f;
+
+                                if (p1.playerclass == CLASS_GUERREIRO) {
+                                    p1.state = PLAYER_HURT;
+                                    p1.currentFrame = 0;
+                                    p1.frameTime = 0.0f;
+                                }
+                            }
+                        }
+                    }
+                }
+                // ===== fim dano possuído =====
+
                 
                 if (p1.life > 0 && !p1.ghost && p1.damageCooldown <= 0 && CheckPlayerHit(p1.position, 40.0f)) {
                     p1.life -= 20; 

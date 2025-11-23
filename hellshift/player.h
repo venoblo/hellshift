@@ -62,7 +62,7 @@ typedef struct Player{
 void InitPlayer(Player *p);
 void InitPlayerClassStats(Player *p);
 bool shouldDrawPlayer(Player p);
-void UpdatePlayer(Player *p, Map *map);
+void UpdatePlayer(Player *p, Map *map, Player *other);
 void DrawPlayer(Player p);
 void UnloadPlayerTextures(Player *p);
 

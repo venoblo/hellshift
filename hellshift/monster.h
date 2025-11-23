@@ -10,7 +10,26 @@ struct Player;
 struct Projectile;
 struct SaveData;
 
-// retorna verdadeiro se algum monstro atingiu o jogador
+
+typedef enum MonsterAnimState {
+    MONSTER_IDLE,
+    MONSTER_WALK,
+    MONSTER_ATTACK,
+    MONSTER_HURT,
+    MONSTER_DEATH
+} MonsterAnimState;
+
+typedef enum SkeletonVariant {
+    SKEL_NORMAL = 0,
+    SKEL_ARMORED,
+    SKEL_GREATSWORD,
+    SKEL_VARIANT_COUNT
+} SkeletonVariant;
+
+// speed do attack por variante
+float GetSkeletonAttackAnimSpeed(SkeletonVariant v);
+int GetSkeletonMaxFrames(SkeletonVariant v, MonsterAnimState st);
+
 
 typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro tem de por um desses aqui
     MONSTER_SKELETON,
@@ -18,14 +37,29 @@ typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro 
     MONSTER_SHADOW_SPELL // sombra spell
 }MonsterType;
 
-typedef struct Monster{ // aqui são as caracteristicas base do tipo "Monstro", são o que vai ser editado par adiferenciar cada um, dps agnt muda isso para adicionar sprites e animações
+typedef struct Monster {
     Vector2 position;
+    SkeletonVariant skelVariant; // só usado se type == MONSTER_SKELETON
     MonsterType type;
     int life;
     Color color;
     float speed;
     float activeRange;
-}Monster;
+    bool isPossessed; 
+
+    // --- sprite ---
+    MonsterAnimState state;
+    int currentFrame;
+    float frameTime;
+    int facingDirection; // 1 direita, -1 esquerda
+
+    Texture2D texIdle;
+    Texture2D texWalk;
+    Texture2D texAttack;
+    Texture2D texHurt;
+    Texture2D texDeath;
+} Monster;
+
 
 typedef struct MonsterNode {
     Monster data;               // dados do monstro

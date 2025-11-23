@@ -3,6 +3,8 @@
 #include "map.h"
 #include "monster.h"
 #include <stdlib.h>
+#include "raymath.h"  
+
 
 #define ANIM_SPEED 0.15f 
 #define ATTACK_SPEED 0.1f
@@ -89,32 +91,108 @@ void UnloadPlayerTextures(Player *p) {
     if (p->texDeath.id > 0) UnloadTexture(p->texDeath);
 }
 
+#define DESPOSSESS_PLAYER_RADIUS 150.0f 
 //update
-void UpdatePlayer(Player *p, Map *map) { //aqui são funções do jogadoe
+void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do jogadoe
     
     p->trapActive = false;
     if (p->isPossessing && p->possessedMonster != NULL) {
         MonsterNode *monstro = (MonsterNode*)p->possessedMonster;
-        
+
+        bool moving = false;
+
         // Controla o monstro!
-        if (IsKeyDown(p->keyUp))    monstro->data.position.y -= monstro->data.speed;
-        if (IsKeyDown(p->keyDown))  monstro->data.position.y += monstro->data.speed;
-        if (IsKeyDown(p->keyLeft))  monstro->data.position.x -= monstro->data.speed;
-        if (IsKeyDown(p->keyRight)) monstro->data.position.x += monstro->data.speed;
-        
-        // A câmera/jogador segue o monstro
-        p->position = monstro->data.position; 
-        p->ghost = false; // Tecnicamente não é fantasma visualmente
-        
-        // Se o monstro morrer (vida < 0), o jogador é expulso
+        if (IsKeyDown(p->keyUp))    { monstro->data.position.y -= monstro->data.speed; moving = true; }
+        if (IsKeyDown(p->keyDown))  { monstro->data.position.y += monstro->data.speed; moving = true; }
+        if (IsKeyDown(p->keyLeft))  { monstro->data.position.x -= monstro->data.speed; moving = true; monstro->data.facingDirection = -1; }
+        if (IsKeyDown(p->keyRight)) { monstro->data.position.x += monstro->data.speed; moving = true; monstro->data.facingDirection = 1; }
+
+        // Player segue o monstro
+        p->position = monstro->data.position;
+        p->ghost = true;
+
+        // --- ATAQUE MANUAL DO POSSUÍDO ---
+        // --- AÇÃO: despossuir se estiver longe do player vivo e da trap/bomba ---
+        if (IsKeyPressed(p->keyAction) && monstro->data.state != MONSTER_DEATH) {
+
+            bool nearOtherPlayer = false;
+            if (other != NULL && other->life > 0 && !other->ghost) {
+                float dPlayer = Vector2Distance(other->position, monstro->data.position);
+                if (dPlayer < DESPOSSESS_PLAYER_RADIUS) nearOtherPlayer = true;
+            }
+
+            // Usa a própria checagem de trap do mapa como veto
+            bool nearTrap = CheckTrapInteraction(map, monstro->data.position);
+
+            if (!nearOtherPlayer && !nearTrap) {
+                // despossui
+                monstro->data.isPossessed = false;
+                monstro->data.color = WHITE;
+                monstro->data.state = MONSTER_IDLE;
+                monstro->data.currentFrame = 0;
+                monstro->data.frameTime = 0.0f;
+
+                p->isPossessing = false;
+                p->possessedMonster = NULL;
+                p->ghost = true;
+                p->state = PLAYER_GHOST;
+                p->currentFrame = 0;
+                p->frameTime = 0.0f;
+
+                return; // sai da possessão neste frame
+            }
+
+            // se não pode despossuir, então é ataque normal
+            monstro->data.state = MONSTER_ATTACK;
+            monstro->data.currentFrame = 0;
+            monstro->data.frameTime = 0.0f;
+        }
+
+
+        // --- ANIMAÇÃO DO POSSUÍDO (porque UpdateOneMonster é pulado) ---
+        float animSpeed = 0.15f;
+        int maxF = 1;
+
+        if (monstro->data.state == MONSTER_ATTACK) {
+            animSpeed = GetSkeletonAttackAnimSpeed(monstro->data.skelVariant);
+            maxF = GetSkeletonMaxFrames(monstro->data.skelVariant, MONSTER_ATTACK);
+        }
+        else if (moving) {
+            monstro->data.state = MONSTER_WALK;
+            maxF = GetSkeletonMaxFrames(monstro->data.skelVariant, MONSTER_WALK);
+        }
+        else {
+            monstro->data.state = MONSTER_IDLE;
+            maxF = GetSkeletonMaxFrames(monstro->data.skelVariant, MONSTER_IDLE);
+        }
+
+
+        monstro->data.frameTime += GetFrameTime();
+        if (monstro->data.frameTime >= animSpeed) {
+            monstro->data.frameTime = 0.0f;
+            monstro->data.currentFrame++;
+
+            if (monstro->data.currentFrame >= maxF) {
+                monstro->data.currentFrame = 0;
+
+                // se terminou ataque, volta pra walk/idle
+                if (monstro->data.state == MONSTER_ATTACK) {
+                    monstro->data.state = moving ? MONSTER_WALK : MONSTER_IDLE;
+                }
+            }
+        }
+
+        // Se o monstro morrer, expulsa o jogador
         if (monstro->data.life <= 0) {
+            monstro->data.isPossessed = false;   // libera flag
+
             p->isPossessing = false;
             p->possessedMonster = NULL;
-            p->ghost = true; // Volta a ser fantasma
-            p->state = PLAYER_REBIRTH; // Começa a animação de surgir fantasma
+            p->ghost = true;
+            p->state = PLAYER_REBIRTH;
             p->currentFrame = 3;
-            // A morte real do monstro é tratada no monster.c ou main loop
         }
+
         return;
     }
 
@@ -146,8 +224,10 @@ void UpdatePlayer(Player *p, Map *map) { //aqui são funções do jogadoe
             if (alvo != NULL) {
                 p->isPossessing = true;
                 p->possessedMonster = alvo;
-                // Opcional: Mudar cor do monstro para indicar possessão
-                alvo->data.color = p->originalColor; 
+                alvo->data.isPossessed = true;  
+               //diferencia dos outros esqueletos
+                alvo->data.color = ColorAlpha(DARKGRAY, 0.9f);
+ 
                 return;
             }
 
