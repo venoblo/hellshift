@@ -472,7 +472,7 @@ int main(void)
 
                             // mesmo critério do CheckPlayerHit: playerRadius(40) + monsterRadius(15)
                             if (dist < (40.0f + 15.0f)) {
-                                p2.life -= 20;
+                                p2.life -= m->data.damage;
                                 p2.damageCooldown = 0.6f; 
 
                                 if (p2.playerclass == CLASS_GUERREIRO) {
@@ -493,7 +493,7 @@ int main(void)
                             float dist = Vector2Distance(monsterCenter, p1.position);
 
                             if (dist < (40.0f + 15.0f)) {
-                                p1.life -= 20;
+                                p2.life -= m->data.damage;
                                 p1.damageCooldown = 1.0f;
 
                                 if (p1.playerclass == CLASS_GUERREIRO) {
@@ -718,7 +718,7 @@ int main(void)
                 }
             }
             
-            // --- DESENHO GAME OVER (AGORA VAI APARECER) ---
+            // --- DESENHO GAME OVER  ---
             else if (currentScreen == SCREEN_GAMEOVER) {
                 DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0, 0, 0, 200}); 
                 DrawText("GAME OVER", 280, 150, 50, RED);
