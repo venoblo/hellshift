@@ -6,18 +6,21 @@
 #include "map.h"
 
 
-typedef struct Projectil{
+typedef struct Projectile{
     Vector2 position;
     Vector2 direction;
     float speed;
     float radius;
     Color color;
-} Projectil;
+    int currentFrame;
+    float frameTime;
 
-typedef struct ProjectilNode {
-    Projectil data;
-    struct ProjectilNode *next;
-} ProjectilNode;
+} Projectile;
+
+typedef struct ProjectileNode {
+    Projectile data;
+    struct ProjectileNode *next;
+} ProjectileNode;
 
 
 

@@ -80,6 +80,8 @@ void InitPlayerClassStats(Player *p) {
         p->texDeath   = LoadTexture("resources/characters/magop1/Wizard-Death.png");
     }
     p->trapActive = false;
+    p->lastMoveDir = (Vector2){ 0.0f, -1.0f }; // setar a direção de início para cima
+
 }
 
 void UnloadPlayerTextures(Player *p) {
@@ -242,30 +244,33 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
     }
     
     
-    
+    // movimentação jogadores vivos
 
     if (IsKeyDown(p->keyUp)) { 
         p->position.y -= p->speed; 
-        isMoving = true;       
+        isMoving = true;
+        p->lastMoveDir = (Vector2){ 0.0f, -1.0f };
     }
     if (IsKeyDown(p->keyDown)) { 
         p->position.y += p->speed; 
-        isMoving = true;       
+        isMoving = true;
+        p->lastMoveDir = (Vector2){ 0.0f, 1.0f };
     }
     if (IsKeyDown(p->keyLeft)) { 
         p->position.x -= p->speed; 
         isMoving = true;       
         p->facingDirection = -1;
+        p->lastMoveDir = (Vector2){ -1.0f, 0.0f };
     }
     if (IsKeyDown(p->keyRight)) { 
         p->position.x += p->speed; 
         isMoving = true;        
         p->facingDirection = 1; 
-    }
-    if (CheckMapCollision(*map, p->position)) {
-        p->position = oldPos;
+        p->lastMoveDir = (Vector2){ 1.0f, 0.0f };
     }
 
+
+    // ação jogadores vivos
     if (IsKeyPressed(p->keyAction)) {
 
         p->state = PLAYER_ATTACK;
@@ -274,9 +279,16 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         
         // 1. Ataque Mago (Projétil)
         if (p->playerclass == CLASS_MAGO) {
-            Vector2 direcaoDoTiro = (Vector2){0.0f, -1.0f}; 
+            Vector2 direcaoDoTiro = p->lastMoveDir;
+
+            // segurança: se por algum bug vier zero, atira pra direita
+            if (direcaoDoTiro.x == 0.0f && direcaoDoTiro.y == 0.0f) {
+                direcaoDoTiro = (Vector2){1.0f, 0.0f};
+            }
+
             SpawnProjectile(p->position, direcaoDoTiro);
         }
+
         // 2. Ataque Guerreiro (Melee)
         else if (p->playerclass == CLASS_GUERREIRO) {
             float alcanceEspada = 100.0f;

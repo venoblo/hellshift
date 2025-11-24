@@ -56,6 +56,7 @@ typedef struct Player{
     float frameTime;         // contador de tempo para trocar frame
     int currentFrame;        
     int facingDirection;     // 1 = Direita, (para splitar) -1 = Esquerda
+    Vector2 lastMoveDir; 
     bool isAttacking;        
 } Player;
 
