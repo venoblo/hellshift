@@ -144,7 +144,7 @@ static void GenerateDungeon(Dungeon *d) {
     d->currentRoom = 0;
 }
 
-//Deixa mais hardcore tlgd (aumenta o numero de salas e inimigos)
+//Deixa mais hardcore tlgd (aumenta o numero de salas e inimigos conforme passa de andar)
 static void GenerateDungeonWithDifficulty(Dungeon *d) {
 
     d->roomCount = 0;
@@ -491,7 +491,9 @@ void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers) {
     }
 }
 
-
+// ===========
+// Minimapa
+// ===========
 Color GetRoomColor(Room *r, bool isCurrent)
 {
     if (isCurrent) 
@@ -510,9 +512,17 @@ Color GetRoomColor(Room *r, bool isCurrent)
     }
 }
 
-// ===========
-// Minimapa
-// ===========
+static Vector2 GetMiniMapPosition(Room *r, Room *current, int centerX, int centerY, int tileSize)
+{
+    int dx = r->gridX - current->gridX;
+    int dy = r->gridY - current->gridY;
+
+    float px = centerX + dx * (tileSize + 6);
+    float py = centerY + dy * (tileSize + 6);
+
+    return (Vector2){ px, py };
+}
+
 void DrawMiniMap(Map *map, bool expanded)
 {
     Dungeon *d = &map->dungeon;
