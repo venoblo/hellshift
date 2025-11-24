@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+Texture2D wallTex;
+Texture2D floorTex;
+Texture2D doorTex;
+
 /* =========================================
    Funções INTERNAS
 ========================================= */
@@ -261,6 +265,10 @@ static void SpawnRoomEnemies(Map *map) {
 
 void LoadMap(Map *map, const char *fileName) {
     (void)fileName;
+
+    wallTex = LoadTexture("assets/tiles/wall.png");
+    floorTex = LoadTexture("assets/tiles/floor.png");
+    doorTex = LoadTexture("assets/tiles/door.png");
 
     map->dungeon.floorLevel = 1;       // começa no andar 1
     GenerateDungeonWithDifficulty(&map->dungeon);
