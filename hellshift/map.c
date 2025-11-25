@@ -5,13 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-Texture2D wallTex;
-Texture2D floorTex;
-Texture2D doorTex;
-
 /* =========================================
    Funções INTERNAS
 ========================================= */
+
+
 
 // Copia a sala atual para map->tiles
 static void LoadRoomToMap(Map *map) {
@@ -39,11 +37,31 @@ static int FindRoom(Dungeon *d, int gx, int gy) {
 static void BuildRoom(Room *r) {
 
     for (int y = 0; y < MAP_HEIGHT; y++) {
-        for (int x = 0; x < MAP_WIDTH; x++) {
-            if (x == 0 || y == 0 || x == MAP_WIDTH - 1 || y == MAP_HEIGHT - 1)
-                r->tiles[y][x] = TILE_WALL;
-            else
-                r->tiles[y][x] = 0;
+    for (int x = 0; x < MAP_WIDTH; x++) {
+
+        // Cantos
+        if (x == 0 && y == 0)
+            r->tiles[y][x] = TILE_WALL_TL;
+        else if (x == MAP_WIDTH - 1 && y == 0)
+            r->tiles[y][x] = TILE_WALL_TR;
+        else if (x == 0 && y == MAP_HEIGHT - 1)
+            r->tiles[y][x] = TILE_WALL_BL;
+        else if (x == MAP_WIDTH - 1 && y == MAP_HEIGHT - 1)
+            r->tiles[y][x] = TILE_WALL_BR;
+
+        // Bordas
+        else if (y == 0)
+            r->tiles[y][x] = TILE_WALL_TOP;
+        else if (y == MAP_HEIGHT - 1)
+            r->tiles[y][x] = TILE_WALL_BOTTOM;
+        else if (x == 0)
+            r->tiles[y][x] = TILE_WALL_LEFT;
+        else if (x == MAP_WIDTH - 1)
+            r->tiles[y][x] = TILE_WALL_RIGHT;
+
+        // Chão
+        else
+            r->tiles[y][x] = TILE_EMPTY;
         }
     }
 
@@ -263,12 +281,34 @@ static void SpawnRoomEnemies(Map *map) {
    Funções PÚBLICAS
 ========================================= */
 
+Texture2D wallTex;
+Texture2D floorTex;
+Texture2D doorTex;
+
+void LoadMapTextures(void)
+{
+    wallTex = LoadTexture("resources/tiles/decorative_cracks_walls.png");
+    floorTex = LoadTexture("resources/tiles/decorative_cracks_floor.png");
+    doorTex = LoadTexture("resources/tiles/doors_lever_chest_animation.png");
+
+    printf("Wall ID: %d\n", wallTex.id);
+    printf("Floor ID: %d\n", floorTex.id);
+    printf("Door ID: %d\n", doorTex.id);
+}
+
+void UnloadMapTextures(void)
+{
+    UnloadTexture(wallTex);
+    UnloadTexture(floorTex);
+    UnloadTexture(doorTex);
+}
+
 void LoadMap(Map *map, const char *fileName) {
     (void)fileName;
 
-    wallTex = LoadTexture("assets/tiles/wall.png");
-    floorTex = LoadTexture("assets/tiles/floor.png");
-    doorTex = LoadTexture("assets/tiles/door.png");
+    SetTextureFilter(doorTex, TEXTURE_FILTER_POINT);
+    SetTextureFilter(wallTex, TEXTURE_FILTER_POINT);
+    SetTextureFilter(floorTex, TEXTURE_FILTER_POINT);
 
     map->dungeon.floorLevel = 1;       // começa no andar 1
     GenerateDungeonWithDifficulty(&map->dungeon);
@@ -278,11 +318,32 @@ void LoadMap(Map *map, const char *fileName) {
     map->dungeon.rooms[0].visited = true; // sala inicial mascada como visitada
 }
 
-void DrawMap(Map map) {
+static Rectangle GetTile(int col, int row)
+{
+    return (Rectangle){
+        col * SPRITE_SIZE,
+        row * SPRITE_SIZE,
+        SPRITE_SIZE,
+        SPRITE_SIZE
+    };
+}
 
-    for (int y = 0; y < MAP_HEIGHT; y++) {
-        for (int x = 0; x < MAP_WIDTH; x++) {
+static Rectangle GetDoorTile(int col, int row)
+{
+    return (Rectangle){
+        col * 32,   // porta é 32x32 nesse sheet
+        row * 24,
+        32,
+        24
+    };
+}
 
+void DrawMap(Map map)
+{
+    for (int y = 0; y < MAP_HEIGHT; y++)
+    {
+        for (int x = 0; x < MAP_WIDTH; x++)
+        {
             Rectangle tileRec = {
                 .x = x * TILE_SIZE + MAP_OFFSET_X,
                 .y = y * TILE_SIZE + MAP_OFFSET_Y,
@@ -290,21 +351,72 @@ void DrawMap(Map map) {
                 .height = TILE_SIZE
             };
 
+            Rectangle dest = { tileRec.x, tileRec.y, TILE_SIZE, TILE_SIZE };
+
             int t = map.tiles[y][x];
+            Rectangle src;
 
-            if (t == TILE_WALL)
-                DrawRectangleRec(tileRec, GRAY);
+            // 1) PAREDES (usam wallTex)
+            if (t >= TILE_WALL_TOP && t <= TILE_WALL_BR)
+            {
+                switch (t)
+                {
+                    case TILE_WALL_TOP:    src = GetTile(0, 0); break;
+                    case TILE_WALL_BOTTOM: src = GetTile(1, 0); break;
+                    case TILE_WALL_LEFT:   src = GetTile(2, 0); break;
+                    case TILE_WALL_RIGHT:  src = GetTile(3, 0); break;
+                    case TILE_WALL_TL:     src = GetTile(4, 0); break;
+                    case TILE_WALL_TR:     src = GetTile(5, 0); break;
+                    case TILE_WALL_BL:     src = GetTile(6, 0); break;
+                    case TILE_WALL_BR:     src = GetTile(7, 0); break;
+                    default:               src = GetTile(0, 0); break;
+                }
 
-            else if (t == TILE_TRAP) {
-                DrawRectangleRec(tileRec, MAROON);
-                DrawCircle(tileRec.x + 20, tileRec.y + 20, 10, RED);
+                DrawTexturePro(
+                    wallTex,
+                    src,
+                    dest,
+                    (Vector2){0,0},
+                    0,
+                    WHITE
+                );
             }
 
+            // 2) PORTA (usa doorTex)
             else if (t == TILE_DOOR)
-                DrawRectangleRec(tileRec, GOLD);
+            {
+                // ajusta (col,row) conforme o tile de porta da sua spritesheet
+                src = GetDoorTile(0, 0);
+                DrawTexturePro(
+                    doorTex,
+                    src,
+                    dest,
+                    (Vector2){0,0},
+                    0,
+                    WHITE
+                );
+            }
 
+            // 3) ARMADILHA (só cor por enquanto)
+            else if (t == TILE_TRAP)
+            {
+                DrawRectangleRec(tileRec, MAROON);
+            }
+
+            // 4) CHÃO (usa floorTex)
             else
-                DrawRectangleRec(tileRec, DARKGRAY);
+            {
+                // ajusta (col,row) pro tile de piso que você quiser
+                src = GetTile(0, 0);
+                DrawTexturePro(
+                    floorTex,
+                    src,
+                    dest,
+                    (Vector2){0,0},
+                    0,
+                    WHITE
+                );
+            }
         }
     }
 }
@@ -320,7 +432,11 @@ bool CheckMapCollision(Map map, Vector2 worldPos) {
     if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT)
         return true;
 
-    return (map.tiles[mapY][mapX] == TILE_WALL);
+    int tile = map.tiles[mapY][mapX];
+
+    return (
+        tile >= TILE_WALL_TOP && tile <= TILE_WALL_BR
+    );
 }
 
 bool CheckTrapInteraction(Map *map, Vector2 worldPos) {

@@ -9,13 +9,25 @@ struct Player;
 // tamanho do mapa (= tamanho de UMA SALA)
 #define MAP_WIDTH   20
 #define MAP_HEIGHT  12
-#define TILE_SIZE   40
+#define SPRITE_SIZE 16
+#define TILE_SIZE   32
 
 #define MAP_OFFSET_X 0
 #define MAP_OFFSET_Y 0
-#define TILE_TRAP 2
-#define TILE_WALL 1
-#define TILE_DOOR 3
+
+#define TILE_EMPTY 0
+
+#define TILE_WALL_TOP     1
+#define TILE_WALL_BOTTOM  2
+#define TILE_WALL_LEFT    3
+#define TILE_WALL_RIGHT   4
+#define TILE_WALL_TL       5
+#define TILE_WALL_TR       6
+#define TILE_WALL_BL       7
+#define TILE_WALL_BR       8
+
+#define TILE_TRAP 20
+#define TILE_DOOR 30
 
 #define MAX_ROOMS 20   // quantidade máxima de salas na dungeon
 
@@ -74,5 +86,9 @@ void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers);
 
 // Minimapa
 void DrawMiniMap(Map *map, bool expanded);
+
+// textura do mapa
+void LoadMapTextures(void);
+void UnloadMapTextures(void);
 
 #endif

@@ -38,9 +38,6 @@ char tempName[21] = "PLAYER";
 int letterCount = 6;
 int framesCounter = 0;
 
-#define MAP_OFFSET_X 0 
-#define MAP_OFFSET_Y 0 
-
 // Players Globais para facilitar Save/Load
 Player p1, p2;
 
@@ -125,6 +122,7 @@ int main(void)
     const int screenHeight = 480;
 
     InitWindow(screenWidth, screenHeight, "Hellshift - Final");
+    LoadMapTextures();
     LoadMap(&mapa, "level1.txt");
     SetTargetFPS(60); 
     SetExitKey(0); 
@@ -572,6 +570,7 @@ int main(void)
                 p1.ready = false; p2.ready = false;
                 UnloadMonsters(); 
                 UnloadProjectiles();
+                UnloadMapTextures();
                 currentScreen = SCREEN_MAIN_MENU;
             }
         }
