@@ -117,6 +117,7 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         // --- AÇÃO: despossuir se estiver longe do player vivo e da trap/bomba ---
         if (IsKeyPressed(p->keyAction) && monstro->data.state != MONSTER_DEATH) {
 
+
             bool nearOtherPlayer = false;
             if (other != NULL && other->life > 0 && !other->ghost) {
                 float dPlayer = Vector2Distance(other->position, monstro->data.position);
@@ -145,9 +146,11 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
             }
 
             // se não pode despossuir, então é ataque normal
-            monstro->data.state = MONSTER_ATTACK;
-            monstro->data.currentFrame = 0;
-            monstro->data.frameTime = 0.0f;
+            if (monstro->data.attackCooldownTimer <= 0.0f) {
+                monstro->data.state = MONSTER_ATTACK;
+                monstro->data.currentFrame = 0;
+                monstro->data.frameTime = 0.0f;
+            }
         }
 
 
@@ -155,18 +158,25 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         float animSpeed = 0.15f;
         int maxF = 1;
 
+        // baixa cooldown mesmo possuído
+        if (monstro->data.attackCooldownTimer > 0) {
+            monstro->data.attackCooldownTimer -= GetFrameTime();
+            if (monstro->data.attackCooldownTimer < 0) monstro->data.attackCooldownTimer = 0;
+        }
+
         if (monstro->data.state == MONSTER_ATTACK) {
-            animSpeed = GetSkeletonAttackAnimSpeed(monstro->data.skelVariant);
-            maxF = GetSkeletonMaxFrames(monstro->data.skelVariant, MONSTER_ATTACK);
+            animSpeed = GetMonsterAttackAnimSpeedGeneric(&monstro->data);
+            maxF = GetMonsterMaxFramesGeneric(&monstro->data, MONSTER_ATTACK);
         }
         else if (moving) {
             monstro->data.state = MONSTER_WALK;
-            maxF = GetSkeletonMaxFrames(monstro->data.skelVariant, MONSTER_WALK);
+            maxF = GetMonsterMaxFramesGeneric(&monstro->data, MONSTER_WALK);
         }
         else {
             monstro->data.state = MONSTER_IDLE;
-            maxF = GetSkeletonMaxFrames(monstro->data.skelVariant, MONSTER_IDLE);
+            maxF = GetMonsterMaxFramesGeneric(&monstro->data, MONSTER_IDLE);
         }
+
 
 
         monstro->data.frameTime += GetFrameTime();

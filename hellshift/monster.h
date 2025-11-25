@@ -26,26 +26,53 @@ typedef enum SkeletonVariant {
     SKEL_VARIANT_COUNT
 } SkeletonVariant;
 
+typedef enum OrcVariant {
+    ORC_NORMAL = 0,
+    ORC_ARMORED,
+    ORC_ELITE,
+    ORC_RIDER,
+    ORC_VARIANT_COUNT
+} OrcVariant;
+
 // speed do attack por variante
 float GetSkeletonAttackAnimSpeed(SkeletonVariant v);
 int GetSkeletonMaxFrames(SkeletonVariant v, MonsterAnimState st);
+
+// forward declaration correta
+typedef struct Monster Monster;
+
+int GetMonsterMaxFramesGeneric(Monster *m, MonsterAnimState st);
+float GetMonsterAttackAnimSpeedGeneric(Monster *m);
+
 
 
 typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro tem de por um desses aqui
     MONSTER_SKELETON,
     MONSTER_SHADOW_MELEE, // Sombra de adaga
-    MONSTER_SHADOW_SPELL // sombra spell
+    MONSTER_SHADOW_SPELL, // sombra spell
+    MONSTER_ORC,
+    MONSTER_ARMORED_ORC,
+    MONSTER_ELITE_ORC,
+    MONSTER_ORC_RIDER,
+    MONSTER_SLIME
 }MonsterType;
 
 typedef struct Monster {
     Vector2 position;
-    SkeletonVariant skelVariant; // só usado se type == MONSTER_SKELETON
     MonsterType type;
+    SkeletonVariant skelVariant; // só usado se type == MONSTER_SKELETON
+    OrcVariant orcVariant;
+
     int life;
+    int damage;
     Color color;
     float speed;
     float activeRange;
     bool isPossessed; 
+
+    // cooldown de ataque (para elite/rider etc.)
+    float attackCooldown;       // tempo base entre ataques
+    float attackCooldownTimer;  // timer atual
 
     // --- sprite ---
     MonsterAnimState state;
