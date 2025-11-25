@@ -81,10 +81,10 @@ static void BuildRoom(Room *r) {
     int midX = MAP_WIDTH / 2;
     int midY = MAP_HEIGHT / 2;
 
-    if (r->doorUp)    r->tiles[0][midX] = TILE_DOOR;
-    if (r->doorDown)  r->tiles[MAP_HEIGHT - 1][midX] = TILE_DOOR;
-    if (r->doorLeft)  r->tiles[midY][0] = TILE_DOOR;
-    if (r->doorRight) r->tiles[midY][MAP_WIDTH - 1] = TILE_DOOR;
+    if (r->doorUp)    r->tiles[0][midX] = TILE_DOOR_CLOSED;
+    if (r->doorDown)  r->tiles[MAP_HEIGHT - 1][midX] = TILE_DOOR_CLOSED;
+    if (r->doorLeft)  r->tiles[midY][0] = TILE_DOOR_CLOSED;
+    if (r->doorRight) r->tiles[midY][MAP_WIDTH - 1] = TILE_DOOR_CLOSED;
 
     // Armadilhas aleatórias
     if (r->type == ROOM_NORMAL) {
@@ -430,10 +430,24 @@ void DrawMap(Map map)
                 );
             }
 
-            // 2) PORTA (usa doorTex)
+            // PORTA ABERTA
             else if (t == TILE_DOOR)
             {
                 // ajusta (col,row) conforme o tile de porta da sua spritesheet
+                src = GetDoorTile(4, 0);
+                DrawTexturePro(
+                    doorTex,
+                    src,
+                    dest,
+                    (Vector2){0,0},
+                    0,
+                    WHITE
+                );
+            }
+
+            // PORTA FECHADA
+            else if (t == TILE_DOOR_CLOSED)
+            {
                 src = GetDoorTile(0, 0);
                 DrawTexturePro(
                     doorTex,
@@ -511,6 +525,17 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
 
     Dungeon *d = &map->dungeon;
     Room *r = &d->rooms[d->currentRoom];
+
+    // abre as portas dps que matar tudo
+    if (GetMonsterCount() == 0) {
+        int midX = MAP_WIDTH / 2;
+        int midY = MAP_HEIGHT / 2;
+
+        if (r->doorUp)    map->tiles[0][midX] = TILE_DOOR;
+        if (r->doorDown)  map->tiles[MAP_HEIGHT - 1][midX] = TILE_DOOR;
+        if (r->doorLeft)  map->tiles[midY][0] = TILE_DOOR;
+        if (r->doorRight) map->tiles[midY][MAP_WIDTH - 1] = TILE_DOOR;
+    }
 
     // Não pode sair se ainda tem inimigos
     if (GetMonsterCount() > 0) return;

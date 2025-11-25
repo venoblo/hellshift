@@ -28,6 +28,7 @@ struct Player;
 
 #define TILE_TRAP 9
 #define TILE_DOOR 10
+#define TILE_DOOR_CLOSED 11
 
 #define MAX_ROOMS 20   // quantidade máxima de salas na dungeon
 
