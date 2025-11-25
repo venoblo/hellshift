@@ -21,13 +21,13 @@ struct Player;
 #define TILE_WALL_BOTTOM  2
 #define TILE_WALL_LEFT    3
 #define TILE_WALL_RIGHT   4
-#define TILE_WALL_TL       5
-#define TILE_WALL_TR       6
-#define TILE_WALL_BL       7
-#define TILE_WALL_BR       8
+#define TILE_WALL_TL      5
+#define TILE_WALL_TR      6
+#define TILE_WALL_BL      7
+#define TILE_WALL_BR      8
 
-#define TILE_TRAP 20
-#define TILE_DOOR 30
+#define TILE_TRAP 9
+#define TILE_DOOR 10
 
 #define MAX_ROOMS 20   // quantidade máxima de salas na dungeon
 

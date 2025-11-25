@@ -477,14 +477,13 @@ bool CheckMapCollision(Map map, Vector2 worldPos) {
     int mapX = (int)(localX / TILE_SIZE);
     int mapY = (int)(localY / TILE_SIZE);
 
-    if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT)
+    if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT){
         return true;
-
+    }
     int tile = map.tiles[mapY][mapX];
 
-    return (
-        tile >= TILE_WALL_TOP && tile <= TILE_WALL_BR
-    );
+    return (tile >= TILE_WALL_TOP && tile <= TILE_WALL_BR);
+
 }
 
 bool CheckTrapInteraction(Map *map, Vector2 worldPos) {

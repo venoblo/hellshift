@@ -256,27 +256,38 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
     
     // movimentação jogadores vivos
 
+    Vector2 move = { 0 };
+
     if (IsKeyDown(p->keyUp)) { 
-        p->position.y -= p->speed; 
+        move.y -= p->speed;
         isMoving = true;
         p->lastMoveDir = (Vector2){ 0.0f, -1.0f };
     }
     if (IsKeyDown(p->keyDown)) { 
-        p->position.y += p->speed; 
+        move.y += p->speed;
         isMoving = true;
         p->lastMoveDir = (Vector2){ 0.0f, 1.0f };
     }
     if (IsKeyDown(p->keyLeft)) { 
-        p->position.x -= p->speed; 
-        isMoving = true;       
+        move.x -= p->speed;
+        isMoving = true;
         p->facingDirection = -1;
         p->lastMoveDir = (Vector2){ -1.0f, 0.0f };
     }
     if (IsKeyDown(p->keyRight)) { 
-        p->position.x += p->speed; 
-        isMoving = true;        
-        p->facingDirection = 1; 
+        move.x += p->speed;
+        isMoving = true;
+        p->facingDirection = 1;
         p->lastMoveDir = (Vector2){ 1.0f, 0.0f };
+    }
+
+    Vector2 newPos = {
+        p->position.x + move.x,
+        p->position.y + move.y
+    };
+
+    if (!CheckMapCollision(*map, newPos)) {
+        p->position = newPos;
     }
 
 
