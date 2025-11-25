@@ -9,3 +9,6 @@ game
 
 # Arquivos de sistema do macOS
 .DS_Store
+
+# Saves
+.dat
