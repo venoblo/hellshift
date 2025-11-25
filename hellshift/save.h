@@ -13,6 +13,9 @@ typedef struct MonsterSaveData {
     Color color;
     float speed;
     float activeRange;
+    int skelVariant;
+    int orcVariant;
+
 } MonsterSaveData;
 
 typedef struct SaveData {

@@ -5,13 +5,28 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 Texture2D wallTex;
 Texture2D floorTex;
 Texture2D doorTex;
 
-/* =========================================
-   Funções INTERNAS
-========================================= */
+
+static MonsterType RollBaseEnemyByFloor(int floor) {
+    if (floor <= 1) return MONSTER_SKELETON;
+
+    if (floor == 2) {
+        int r = GetRandomValue(0, 99);
+        return (r < 70) ? MONSTER_SKELETON : MONSTER_SLIME; // 70/30
+    }
+
+    // floor >= 3
+    int r = GetRandomValue(0, 99);
+    if (r < 50) return MONSTER_SKELETON; // 50%
+    if (r < 75) return MONSTER_SLIME;    // 25%
+    return MONSTER_ORC;                  // 25%
+}
+
+
 
 // Copia a sala atual para map->tiles
 static void LoadRoomToMap(Map *map) {
@@ -237,7 +252,24 @@ static void SpawnRoomEnemies(Map *map) {
         float px = GetRandomValue(80, 700);
         float py = GetRandomValue(80, 400);
 
-        MonsterType tipo = MONSTER_SKELETON;
+        MonsterType tipo;
+
+        // floor 1: só skeleton
+        if (d->floorLevel == 1) {
+            tipo = MONSTER_SKELETON;
+        }
+        // floor 2: 55/45 skeleton/slime
+        else if (d->floorLevel == 2) {
+            int r = GetRandomValue(0, 99);
+            tipo = (r < 55) ? MONSTER_SKELETON : MONSTER_SLIME;
+        }
+        // floor 3+: 60% orc, 20% skeleton, 20% slime
+        else {
+            int r = GetRandomValue(0, 99);
+            if (r < 60)      tipo = MONSTER_ORC;
+            else if (r < 80) tipo = MONSTER_SKELETON;
+            else             tipo = MONSTER_SLIME;
+        }
 
         // Em andares mais altos, chance de sombras
         if (d->floorLevel >= 3 && GetRandomValue(0, 10) > 7) {
@@ -256,6 +288,24 @@ static void SpawnRoomEnemies(Map *map) {
     }
 
     r->cleared = true; // marca que essa sala já foi spawnda
+}
+
+static MonsterType RollEnemyTypeByFloor(int floor) {
+    int r = GetRandomValue(0, 99);
+
+    if (floor <= 1) {
+        return MONSTER_SKELETON; // só skeleton
+    }
+
+    if (floor == 2) {
+        // skeleton + slime (slime começa aparecer)
+        return (r < 55) ? MONSTER_SKELETON : MONSTER_SLIME;  // 70/30
+    }
+
+    // floor >= 3: orcs maioria
+    if (r < 60) return MONSTER_ORC;        // 70% orc
+    if (r < 80) return MONSTER_SKELETON;   // 15% esqueleto
+    return MONSTER_SLIME;                 // 15% slime
 }
 
 
@@ -452,27 +502,9 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
     }
 
     if (!newRoom->cleared) {
-        if (newRoom->type == ROOM_NORMAL) {
-            int qtd = GetRandomValue(3, 6);
-
-            for (int i = 0; i < qtd; i++) {
-                SpawnMonster(
-                    (Vector2){
-                        GetRandomValue(60, 740),
-                        GetRandomValue(60, 420)
-                    },
-                    MONSTER_SKELETON
-                );
-            }
-        }
-
-        else if (newRoom->type == ROOM_BOSS) {
-            SpawnMonster((Vector2){360, 200}, MONSTER_SHADOW_MELEE);
-            SpawnMonster((Vector2){400, 200}, MONSTER_SHADOW_SPELL);
-        }
-
-        newRoom->cleared = true;
+        SpawnRoomEnemies(map);  
     }
+
 }
 
 // ================================

@@ -10,6 +10,23 @@ static MonsterNode *listaDeMonstros = NULL;
 #define SKELETON_SCALE 3.0f
 #define MONSTER_ANIM_SPEED 0.15f
 #define MONSTER_ATTACK_SPEED 0.10f
+#define ORC_SCALE 3.0f
+#define SLIME_SCALE 2.0f
+
+typedef struct OrcSprites {
+    Texture2D idle, walk, attack, hurt, death;
+} OrcSprites;
+
+typedef struct SlimeSprites {
+    Texture2D idle, walk, attack, hurt, death;
+} SlimeSprites;
+
+static bool orcTexturesLoaded = false;
+static OrcSprites orcSprites[ORC_VARIANT_COUNT];
+
+static bool slimeTexturesLoaded = false;
+static SlimeSprites slimeSprites;
+
 
 typedef struct SkeletonSprites {
     Texture2D idle, walk, attack, hurt, death;
@@ -52,6 +69,80 @@ static const int skMaxFrames[SKEL_VARIANT_COUNT][5] = {
     }
 };
 
+// ORC FRAMES / SPEEDS / STATS 
+
+// ordem dos estados na tabela: IDLE, WALK, ATTACK, HURT, DEATH
+static const int orcMaxFrames[ORC_VARIANT_COUNT][5] = {
+    [ORC_NORMAL]  = {6, 8, 6, 4, 4},
+    [ORC_ARMORED] = {6, 8, 7, 4, 4},
+    [ORC_ELITE]   = {6, 8, 9, 4, 4},
+    [ORC_RIDER]   = {6, 8,11, 4, 4}
+};
+
+static const float orcAttackAnimSpeed[ORC_VARIANT_COUNT] = {
+    [ORC_NORMAL]  = 0.10f,
+    [ORC_ARMORED] = 0.10f,
+    [ORC_ELITE]   = 0.14f,  // Elite mais lento
+    [ORC_RIDER]   = 0.18f   // Rider mais lento ainda
+};
+
+// cooldown só pra elite/rider
+static const float orcAttackCooldown[ORC_VARIANT_COUNT] = {
+    [ORC_NORMAL]  = 0.0f,
+    [ORC_ARMORED] = 0.0f,
+    [ORC_ELITE]   = 0.8f,   // Elite cooldown
+    [ORC_RIDER]   = 1.3f    // Rider cooldown maior
+};
+
+// ===== STATS (edite aqui quando quiser) =====
+static const int orcLife[ORC_VARIANT_COUNT] = {
+    [ORC_NORMAL]  = 65,
+    [ORC_ARMORED] = 80,
+    [ORC_ELITE]   = 100,
+    [ORC_RIDER]   = 120
+};
+
+static const float orcMoveSpeed[ORC_VARIANT_COUNT] = {
+    [ORC_NORMAL]  = 1.0f,
+    [ORC_ARMORED] = 1.0f,
+    [ORC_ELITE]   = 1.0f,
+    [ORC_RIDER]   = 0.7f   // Rider mais lento
+};
+
+static const int orcDamage[ORC_VARIANT_COUNT] = {
+    [ORC_NORMAL]  = 10,
+    [ORC_ARMORED] = 10,
+    [ORC_ELITE]   = 15,
+    [ORC_RIDER]   = 20
+};
+
+static const float orcActiveRange[ORC_VARIANT_COUNT] = {
+    [ORC_NORMAL]  = 200.0f,
+    [ORC_ARMORED] = 200.0f,
+    [ORC_ELITE]   = 220.0f,
+    [ORC_RIDER]   = 220.0f
+};
+
+
+// SLIME FRAMES / SPEEDS / STATS
+
+static const int slimeMaxFrames[5] = {
+    6,  // IDLE
+    6,  // WALK
+    12, // ATTACK
+    4,  // HURT
+    4   // DEATH
+};
+
+static const float slimeAttackAnimSpeed = 0.30f;
+
+// STATS
+static const int slimeLife = 50;
+static const float slimeMoveSpeed = 0.8f; 
+static const int slimeDamage = 5;
+static const float slimeActiveRange = 180.0f;
+
+
 int GetSkeletonMaxFrames(SkeletonVariant v, MonsterAnimState st) {
     if (v < 0 || v >= SKEL_VARIANT_COUNT) v = SKEL_NORMAL;
     if (st < 0 || st > MONSTER_DEATH) st = MONSTER_IDLE;
@@ -92,6 +183,74 @@ static void LoadSkeletonTexturesOnce(void) {
     skeletonTexturesLoaded = true;
 }
 
+static void LoadOrcTexturesOnce(void) {
+    if (orcTexturesLoaded) return;
+
+    orcSprites[ORC_NORMAL].idle   = LoadTexture("resources/monsters/orc/Orc-Idle.png");
+    orcSprites[ORC_NORMAL].walk   = LoadTexture("resources/monsters/orc/Orc-Walk.png");
+    orcSprites[ORC_NORMAL].attack = LoadTexture("resources/monsters/orc/Orc-Attack.png");
+    orcSprites[ORC_NORMAL].hurt   = LoadTexture("resources/monsters/orc/Orc-Hurt.png");
+    orcSprites[ORC_NORMAL].death  = LoadTexture("resources/monsters/orc/Orc-Death.png");
+
+    orcSprites[ORC_ARMORED].idle   = LoadTexture("resources/monsters/armored-orc/Armored Orc-Idle.png");
+    orcSprites[ORC_ARMORED].walk   = LoadTexture("resources/monsters/armored-orc/Armored Orc-Walk.png");
+    orcSprites[ORC_ARMORED].attack = LoadTexture("resources/monsters/armored-orc/Armored Orc-Attack.png");
+    orcSprites[ORC_ARMORED].hurt   = LoadTexture("resources/monsters/armored-orc/Armored Orc-Hurt.png");
+    orcSprites[ORC_ARMORED].death  = LoadTexture("resources/monsters/armored-orc/Armored Orc-Death.png");
+
+    orcSprites[ORC_ELITE].idle   = LoadTexture("resources/monsters/elite-orc/Elite Orc-Idle.png");
+    orcSprites[ORC_ELITE].walk   = LoadTexture("resources/monsters/elite-orc/Elite Orc-Walk.png");
+    orcSprites[ORC_ELITE].attack = LoadTexture("resources/monsters/elite-orc/Elite Orc-Attack.png");
+    orcSprites[ORC_ELITE].hurt   = LoadTexture("resources/monsters/elite-orc/Elite Orc-Hurt.png");
+    orcSprites[ORC_ELITE].death  = LoadTexture("resources/monsters/elite-orc/Elite Orc-Death.png");
+
+    orcSprites[ORC_RIDER].idle   = LoadTexture("resources/monsters/orc-rider/Orc Rider-Idle.png");
+    orcSprites[ORC_RIDER].walk   = LoadTexture("resources/monsters/orc-rider/Orc Rider-Walk.png");
+    orcSprites[ORC_RIDER].attack = LoadTexture("resources/monsters/orc-rider/Orc Rider-Attack.png");
+    orcSprites[ORC_RIDER].hurt   = LoadTexture("resources/monsters/orc-rider/Orc Rider-Hurt.png");
+    orcSprites[ORC_RIDER].death  = LoadTexture("resources/monsters/orc-rider/Orc Rider-Death.png");
+
+    orcTexturesLoaded = true;
+}
+
+static void UnloadOrcTexturesOnce(void) {
+    if (!orcTexturesLoaded) return;
+
+    for (int i = 0; i < ORC_VARIANT_COUNT; i++) {
+        if (orcSprites[i].idle.id)   UnloadTexture(orcSprites[i].idle);
+        if (orcSprites[i].walk.id)   UnloadTexture(orcSprites[i].walk);
+        if (orcSprites[i].attack.id) UnloadTexture(orcSprites[i].attack);
+        if (orcSprites[i].hurt.id)   UnloadTexture(orcSprites[i].hurt);
+        if (orcSprites[i].death.id)  UnloadTexture(orcSprites[i].death);
+    }
+
+    orcTexturesLoaded = false;
+}
+
+static void LoadSlimeTexturesOnce(void) {
+    if (slimeTexturesLoaded) return;
+
+    slimeSprites.idle   = LoadTexture("resources/monsters/slime/Slime-Idle.png");
+    slimeSprites.walk   = LoadTexture("resources/monsters/slime/Slime-Walk.png");
+    slimeSprites.attack = LoadTexture("resources/monsters/slime/Slime-Attack.png");
+    slimeSprites.hurt   = LoadTexture("resources/monsters/slime/Slime-Hurt.png");
+    slimeSprites.death  = LoadTexture("resources/monsters/slime/Slime-Death.png");
+
+    slimeTexturesLoaded = true;
+}
+
+static void UnloadSlimeTexturesOnce(void) {
+    if (!slimeTexturesLoaded) return;
+
+    if (slimeSprites.idle.id)   UnloadTexture(slimeSprites.idle);
+    if (slimeSprites.walk.id)   UnloadTexture(slimeSprites.walk);
+    if (slimeSprites.attack.id) UnloadTexture(slimeSprites.attack);
+    if (slimeSprites.hurt.id)   UnloadTexture(slimeSprites.hurt);
+    if (slimeSprites.death.id)  UnloadTexture(slimeSprites.death);
+
+    slimeTexturesLoaded = false;
+}
+
 
 static void UnloadSkeletonTexturesOnce(void) {
     if (!skeletonTexturesLoaded) return;
@@ -108,12 +267,36 @@ static void UnloadSkeletonTexturesOnce(void) {
 }
 
 
-static int GetMonsterMaxFrames(Monster *m) {
+int GetMonsterMaxFramesGeneric(Monster *m, MonsterAnimState st) {
     if (m->type == MONSTER_SKELETON) {
-        return GetSkeletonMaxFrames(m->skelVariant, m->state);
+        return GetSkeletonMaxFrames(m->skelVariant, st);
+    }
+    if (m->type == MONSTER_ORC) {
+        OrcVariant v = m->orcVariant;
+        if (v < 0 || v >= ORC_VARIANT_COUNT) v = ORC_NORMAL;
+        return orcMaxFrames[v][st];
+    }
+    if (m->type == MONSTER_SLIME) {
+        return slimeMaxFrames[st];
     }
     return 1;
 }
+
+float GetMonsterAttackAnimSpeedGeneric(Monster *m) {
+    if (m->type == MONSTER_SKELETON) {
+        return GetSkeletonAttackAnimSpeed(m->skelVariant);
+    }
+    if (m->type == MONSTER_ORC) {
+        OrcVariant v = m->orcVariant;
+        if (v < 0 || v >= ORC_VARIANT_COUNT) v = ORC_NORMAL;
+        return orcAttackAnimSpeed[v];
+    }
+    if (m->type == MONSTER_SLIME) {
+        return slimeAttackAnimSpeed;
+    }
+    return MONSTER_ATTACK_SPEED;
+}
+
 
 
 void ExportMonsters(SaveData *data) {
@@ -128,7 +311,9 @@ void ExportMonsters(SaveData *data) {
         data->monsters[count].color = current->data.color;
         data->monsters[count].speed = current->data.speed;
         data->monsters[count].activeRange = current->data.activeRange;
-        
+        data->monsters[count].skelVariant = (int)current->data.skelVariant;
+        data->monsters[count].orcVariant  = (int)current->data.orcVariant;
+
         count++;
         current = current->next;
     }
@@ -149,19 +334,51 @@ void ImportMonsters(SaveData data) {
             listaDeMonstros->data.speed = data.monsters[i].speed;
             listaDeMonstros->data.activeRange = data.monsters[i].activeRange;
         }
+        listaDeMonstros->data.skelVariant = (SkeletonVariant)data.monsters[i].skelVariant;
+        listaDeMonstros->data.orcVariant  = (OrcVariant)data.monsters[i].orcVariant;
+
+        // re-aponta sprites corretos
+        if (listaDeMonstros->data.type == MONSTER_SKELETON) {
+            SkeletonVariant v = listaDeMonstros->data.skelVariant;
+            if (v < 0 || v >= SKEL_VARIANT_COUNT) v = SKEL_NORMAL;
+            listaDeMonstros->data.texIdle   = skSprites[v].idle;
+            listaDeMonstros->data.texWalk   = skSprites[v].walk;
+            listaDeMonstros->data.texAttack = skSprites[v].attack;
+            listaDeMonstros->data.texHurt   = skSprites[v].hurt;
+            listaDeMonstros->data.texDeath  = skSprites[v].death;
+        }
+        else if (listaDeMonstros->data.type == MONSTER_ORC) {
+            OrcVariant v = listaDeMonstros->data.orcVariant;
+            if (v < 0 || v >= ORC_VARIANT_COUNT) v = ORC_NORMAL;
+            listaDeMonstros->data.texIdle   = orcSprites[v].idle;
+            listaDeMonstros->data.texWalk   = orcSprites[v].walk;
+            listaDeMonstros->data.texAttack = orcSprites[v].attack;
+            listaDeMonstros->data.texHurt   = orcSprites[v].hurt;
+            listaDeMonstros->data.texDeath  = orcSprites[v].death;
+        }
+        else if (listaDeMonstros->data.type == MONSTER_SLIME) {
+            listaDeMonstros->data.texIdle   = slimeSprites.idle;
+            listaDeMonstros->data.texWalk   = slimeSprites.walk;
+            listaDeMonstros->data.texAttack = slimeSprites.attack;
+            listaDeMonstros->data.texHurt   = slimeSprites.hurt;
+            listaDeMonstros->data.texDeath  = slimeSprites.death;
+        }
+
     }
 }
 
 // Desenho melhorado para identificar quem é quem
 static void DrawOneMonster(Monster m) {
-    if (m.type != MONSTER_SKELETON || !skeletonTexturesLoaded) {
-        // placeholders antigos
-        if (m.type == MONSTER_SKELETON) {
-            DrawRectangleV(m.position, (Vector2){30, 30}, BEIGE);
-            DrawRectangleLines(m.position.x, m.position.y, 30, 30, BLACK);
-        } else {
-            DrawRectangleV(m.position, (Vector2){30, 30}, PURPLE);
-        }
+
+    // se não tem sprite carregada, fallback simples
+    bool hasSprite =
+        (m.type == MONSTER_SKELETON && skeletonTexturesLoaded) ||
+        (m.type == MONSTER_ORC && orcTexturesLoaded) ||
+        (m.type == MONSTER_SLIME && slimeTexturesLoaded);
+
+    if (!hasSprite) {
+        DrawRectangleV(m.position, (Vector2){30, 30}, (m.type==MONSTER_SLIME? GREEN : BEIGE));
+        DrawRectangleLines(m.position.x, m.position.y, 30, 30, BLACK);
         return;
     }
 
@@ -172,10 +389,10 @@ static void DrawOneMonster(Monster m) {
         case MONSTER_ATTACK: texToDraw = m.texAttack; break;
         case MONSTER_HURT:   texToDraw = m.texHurt;   break;
         case MONSTER_DEATH:  texToDraw = m.texDeath;  break;
-        default: texToDraw = m.texIdle; break;
+        default: break;
     }
 
-    int maxFrames = GetMonsterMaxFrames(&m);
+    int maxFrames = GetMonsterMaxFramesGeneric(&m, m.state);
     float frameWidth = (float)texToDraw.width / maxFrames;
 
     Rectangle sourceRec = {
@@ -185,37 +402,46 @@ static void DrawOneMonster(Monster m) {
         (float)texToDraw.height
     };
 
-    Vector2 monsterCenter = { m.position.x + 15, m.position.y + 15 };
+    Vector2 center = { m.position.x + 15, m.position.y + 15 };
+
+    float scale = SKELETON_SCALE;
+    if (m.type == MONSTER_ORC) scale = ORC_SCALE;
+    if (m.type == MONSTER_SLIME) scale = SLIME_SCALE;
 
     Rectangle destRec = {
-        monsterCenter.x,
-        monsterCenter.y,
-        frameWidth * SKELETON_SCALE,
-        (float)texToDraw.height * SKELETON_SCALE
+        center.x,
+        center.y,
+        frameWidth * scale,
+        (float)texToDraw.height * scale
     };
 
     Vector2 origin = { destRec.width/2.0f, destRec.height/2.0f };
 
-    Color tint = m.color;
-    if (tint.a == 0) tint = WHITE; // segurança contra lixo/bug de save
+    Color tint = (m.color.a == 0 ? WHITE : m.color);
     DrawTexturePro(texToDraw, sourceRec, destRec, origin, 0.0f, tint);
-
 }
+
 
 
 static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationForce, Map *map) {
     Vector2 monsterCenter = { m->position.x + 15, m->position.y + 15 };
     float distance = Vector2Distance(monsterCenter, targetPos);
 
-    bool isSkeleton = (m->type == MONSTER_SKELETON);
+   bool isMeleeAnimated = (m->type == MONSTER_SKELETON ||m->type == MONSTER_ORC ||m->type == MONSTER_SLIME);
 
-    // Decide se pode mover
-    bool canMove = true;
-    if (isSkeleton) {
-        if (m->state == MONSTER_DEATH) canMove = false;
-        if (m->state == MONSTER_HURT)  canMove = false;   // fica travado apanhando
-        if (distance > 250.0f)         canMove = false;   // range de ativação
+    // baixa cooldown sempre
+    if (m->attackCooldownTimer > 0) {
+        m->attackCooldownTimer -= GetFrameTime();
+        if (m->attackCooldownTimer < 0) m->attackCooldownTimer = 0;
     }
+
+    bool canMove = true;
+    if (isMeleeAnimated) {
+        if (m->state == MONSTER_DEATH) canMove = false;
+        if (m->state == MONSTER_HURT)  canMove = false;
+        if (distance > m->activeRange) canMove = false;
+    }
+
 
     Vector2 oldPos = m->position;
     Vector2 finalDir = {0};
@@ -237,20 +463,26 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
     }
 
     // --- lógica de estado + animação (roda sempre) ---
-    if (isSkeleton) {
+    if (isMeleeAnimated) {
 
         if (finalDir.x < -0.01f) m->facingDirection = -1;
         else if (finalDir.x > 0.01f) m->facingDirection = 1;
 
-        // só muda pra walk/attack se não estiver hurt/death
         if (m->state != MONSTER_HURT && m->state != MONSTER_DEATH) {
-            if (distance <= 35.0f) m->state = MONSTER_ATTACK;
-            else if (canMove)      m->state = MONSTER_WALK;
-            else                   m->state = MONSTER_IDLE;
+
+            if (distance <= 35.0f && m->attackCooldownTimer <= 0.0f) {
+                m->state = MONSTER_ATTACK;
+            }
+            else if (canMove) {
+                m->state = MONSTER_WALK;
+            }
+            else {
+                m->state = MONSTER_IDLE;
+            }
         }
 
         float animSpeed = MONSTER_ANIM_SPEED;
-        if (m->state == MONSTER_ATTACK) animSpeed = GetSkeletonAttackAnimSpeed(m->skelVariant);
+        if (m->state == MONSTER_ATTACK) animSpeed = GetMonsterAttackAnimSpeedGeneric(m);
         if (m->state == MONSTER_HURT)   animSpeed = 0.08f;
         if (m->state == MONSTER_DEATH)  animSpeed = 0.12f;
 
@@ -259,7 +491,7 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
             m->frameTime = 0.0f;
             m->currentFrame++;
 
-            int maxF = GetMonsterMaxFrames(m);
+            int maxF = GetMonsterMaxFramesGeneric(m, m->state);
 
             if (m->currentFrame >= maxF) {
                 if (m->state == MONSTER_HURT) {
@@ -267,7 +499,13 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
                     m->currentFrame = 0;
                 }
                 else if (m->state == MONSTER_DEATH) {
-                    m->currentFrame = maxF - 1; // trava no último
+                    m->currentFrame = maxF - 1;
+                }
+                else if (m->state == MONSTER_ATTACK) {
+                    m->currentFrame = 0;
+                    // aplica cooldown quando termina o ataque
+                    m->attackCooldownTimer = m->attackCooldown;
+                    m->state = MONSTER_IDLE;
                 }
                 else {
                     m->currentFrame = 0;
@@ -275,55 +513,115 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
             }
         }
     }
+
+    
 }
 
+
+static OrcVariant RollOrcVariantWeighted(void) {
+    // Rider mais raro
+    int roll = GetRandomValue(0, 99);
+    if (roll < 50) return ORC_NORMAL;      // 50%
+    if (roll < 75) return ORC_ARMORED;     // 25%
+    if (roll < 90) return ORC_ELITE;       // 15%
+    return ORC_RIDER;                     // 10%
+}
 
 void SpawnMonster(Vector2 position, MonsterType type) {
     MonsterNode *novoMonstro = (MonsterNode *)malloc(sizeof(MonsterNode));
     if (novoMonstro == NULL) return;
-    
-    novoMonstro->data.position = position;
-    novoMonstro->data.type = type;
 
-    novoMonstro->data.isPossessed = false;
+    Monster *m = &novoMonstro->data;
+    m->position = position;
+    m->type = type;
 
-    // defaults comuns
-    novoMonstro->data.state = MONSTER_IDLE;
-    novoMonstro->data.currentFrame = 0;
-    novoMonstro->data.frameTime = 0.0f;
-    novoMonstro->data.facingDirection = 1;
+    m->isPossessed = false;
+
+    // defaults
+    m->state = MONSTER_IDLE;
+    m->currentFrame = 0;
+    m->frameTime = 0.0f;
+    m->facingDirection = 1;
+
+    m->attackCooldown = 0.0f;
+    m->attackCooldownTimer = 0.0f;
 
     if (type == MONSTER_SKELETON) {
         LoadSkeletonTexturesOnce();
 
         SkeletonVariant v = (SkeletonVariant)GetRandomValue(0, SKEL_VARIANT_COUNT - 1);
-        novoMonstro->data.skelVariant = v;
+        m->skelVariant = v;
 
-        novoMonstro->data.texIdle   = skSprites[v].idle;
-        novoMonstro->data.texWalk   = skSprites[v].walk;
-        novoMonstro->data.texAttack = skSprites[v].attack;
-        novoMonstro->data.texHurt   = skSprites[v].hurt;
-        novoMonstro->data.texDeath  = skSprites[v].death;
+        m->texIdle   = skSprites[v].idle;
+        m->texWalk   = skSprites[v].walk;
+        m->texAttack = skSprites[v].attack;
+        m->texHurt   = skSprites[v].hurt;
+        m->texDeath  = skSprites[v].death;
 
-        // stats + cor normal
-        novoMonstro->data.life = 70;
-        novoMonstro->data.speed = 1.0f;
-        novoMonstro->data.color = WHITE;     // 
-        novoMonstro->data.activeRange = 190.0f;
+        // ===== SKELETON STATS =====
+        m->life = 70;
+        m->damage = 15;
+        m->speed = 1.0f;
+        m->activeRange = 190.0f;
+        m->attackCooldown = 0.0f;
 
-    } else {
-        // placeholder shadows
-        novoMonstro->data.life = 60;
-        novoMonstro->data.speed = 2.5f;
-        novoMonstro->data.color = PURPLE;    // <--- ESSENCIAL
-        novoMonstro->data.activeRange = 2000.0f;
+        m->color = WHITE;
 
-        novoMonstro->data.texIdle.id = 0; // resto 0
     }
-    
+    else if (type == MONSTER_ORC) {
+        LoadOrcTexturesOnce();
+
+        OrcVariant v = RollOrcVariantWeighted();
+        m->orcVariant = v;
+
+        m->texIdle   = orcSprites[v].idle;
+        m->texWalk   = orcSprites[v].walk;
+        m->texAttack = orcSprites[v].attack;
+        m->texHurt   = orcSprites[v].hurt;
+        m->texDeath  = orcSprites[v].death;
+
+        // ===== ORC STATS =====
+        m->life = orcLife[v];
+        m->damage = orcDamage[v];
+        m->speed = orcMoveSpeed[v];
+        m->activeRange = orcActiveRange[v];
+        m->attackCooldown = orcAttackCooldown[v];
+
+        m->color = WHITE;
+    }
+    else if (type == MONSTER_SLIME) {
+        LoadSlimeTexturesOnce();
+
+        m->texIdle   = slimeSprites.idle;
+        m->texWalk   = slimeSprites.walk;
+        m->texAttack = slimeSprites.attack;
+        m->texHurt   = slimeSprites.hurt;
+        m->texDeath  = slimeSprites.death;
+
+        // ===== SLIME STATS =====
+        m->life = slimeLife;
+        m->damage = slimeDamage;
+        m->speed = slimeMoveSpeed;
+        m->activeRange = slimeActiveRange;
+        m->attackCooldown = 0.0f;
+
+        m->color = WHITE;
+    }
+    else {
+        // shadows placeholder
+        m->life = 60;
+        m->damage = 20;
+        m->speed = 2.5f;
+        m->color = PURPLE;
+        m->activeRange = 2000.0f;
+
+        m->texIdle.id = 0;
+    }
+
     novoMonstro->next = listaDeMonstros;
     listaDeMonstros = novoMonstro;
 }
+
 
 
 void UpdateMonsters(Player *p1, Player *p2, int numPlayers, Map *map) {
@@ -336,12 +634,13 @@ void UpdateMonsters(Player *p1, Player *p2, int numPlayers, Map *map) {
         bool possessedByP1 = (p1->isPossessing && (MonsterNode*)p1->possessedMonster == current);
         bool possessedByP2 = (numPlayers == 2 && p2->isPossessing && (MonsterNode*)p2->possessedMonster == current);
 
-        // remove skeleton só depois do death terminar e se não estiver possuído
+        bool isAnimatedType = (current->data.type == MONSTER_SKELETON || current->data.type == MONSTER_ORC || current->data.type == MONSTER_SLIME);
+
         if (!possessedByP1 && !possessedByP2 &&
-            current->data.type == MONSTER_SKELETON &&
+            isAnimatedType &&
             current->data.state == MONSTER_DEATH) {
 
-            int maxF = GetMonsterMaxFrames(&current->data);
+            int maxF = GetMonsterMaxFramesGeneric(&current->data, MONSTER_DEATH);
             if (current->data.currentFrame >= maxF - 1) {
                 if (prev == NULL) listaDeMonstros = next;
                 else prev->next = next;
@@ -350,6 +649,7 @@ void UpdateMonsters(Player *p1, Player *p2, int numPlayers, Map *map) {
                 continue;
             }
         }
+
 
         // se estiver possuído, Player.c move ele
         if (possessedByP1 || possessedByP2) {
@@ -410,6 +710,10 @@ void UnloadMonsters(void) {
     }
     listaDeMonstros = NULL;
     UnloadSkeletonTexturesOnce();
+    UnloadSkeletonTexturesOnce();
+    UnloadOrcTexturesOnce();
+    UnloadSlimeTexturesOnce();
+
 }
 
 int CheckMonsterCollision(Rectangle rect) {
@@ -426,16 +730,23 @@ int CheckMonsterCollision(Rectangle rect) {
         };
 
         if (CheckCollisionRecs(rect, monsterRect)) {
-
+            bool isAnimatedType =
+            (current->data.type == MONSTER_SKELETON
+            || current->data.type == MONSTER_ORC
+            || current->data.type == MONSTER_ARMORED_ORC
+            || current->data.type == MONSTER_ELITE_ORC
+            || current->data.type == MONSTER_ORC_RIDER
+            || current->data.type == MONSTER_SLIME
+            );
+            
             // se já está morrendo, não toma dano de novo
-            if (current->data.type == MONSTER_SKELETON &&
-                current->data.state == MONSTER_DEATH) {
+            if (isAnimatedType && current->data.state == MONSTER_DEATH) {
                 return 0;
             }
 
             current->data.life -= 30;
 
-            if (current->data.type == MONSTER_SKELETON) {
+            if (isAnimatedType) {
                 if (current->data.life > 0) {
                     current->data.state = MONSTER_HURT;
                     current->data.currentFrame = 0;
@@ -516,10 +827,16 @@ int CheckMeleeAttack(Vector2 playerPos, float range, int damage) {
         
         // Se a distância for menor que o alcance (ex: 60px)
         if (dist <= range) {
-
+            bool isAnimatedType =
+            (current->data.type == MONSTER_SKELETON
+            || current->data.type == MONSTER_ORC
+            || current->data.type == MONSTER_ARMORED_ORC
+            || current->data.type == MONSTER_ELITE_ORC
+            || current->data.type == MONSTER_ORC_RIDER
+            || current->data.type == MONSTER_SLIME
+            );
             // se já está morrendo, ignora
-            if (current->data.type == MONSTER_SKELETON &&
-                current->data.state == MONSTER_DEATH) {
+            if (isAnimatedType && current->data.state == MONSTER_DEATH) {
                 prev = current;
                 current = nextNode;
                 continue;
@@ -527,7 +844,7 @@ int CheckMeleeAttack(Vector2 playerPos, float range, int damage) {
 
             current->data.life -= damage;
 
-            if (current->data.type == MONSTER_SKELETON) {
+            if (isAnimatedType) {
                 if (current->data.life > 0) {
                     current->data.state = MONSTER_HURT;
                     current->data.currentFrame = 0;
