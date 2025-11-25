@@ -9,6 +9,34 @@
    Funções INTERNAS
 ========================================= */
 
+bool TryOpenChest(Map *map, Player *p)
+{
+    int mapX = (int)((p->position.x - MAP_OFFSET_X) / TILE_SIZE);
+    int mapY = (int)((p->position.y - MAP_OFFSET_Y) / TILE_SIZE);
+
+    if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT)
+        return false;
+
+    int *tile = &map->tiles[mapY][mapX];
+
+    if (*tile == TILE_CHEST_CLOSED)
+    {
+        *tile = TILE_CHEST_OPEN;
+        map->dungeon.rooms[map->dungeon.currentRoom].tiles[mapY][mapX] = TILE_CHEST_OPEN;
+
+        // Cura o player
+        int healAmount = 40;
+        p->life += healAmount;
+
+        if (p->life > p->maxLife)
+            p->life = p->maxLife;
+
+        return true;
+    }
+
+    return false;
+}
+
 static MonsterType RollBaseEnemyByFloor(int floor) {
     if (floor <= 1) return MONSTER_SKELETON;
 
@@ -96,6 +124,15 @@ static void BuildRoom(Room *r) {
             if (r->tiles[ry][rx] == 0)
                 r->tiles[ry][rx] = TILE_TRAP;
         }
+    }
+
+    // Baú em salas de tesouro
+    if (r->type == ROOM_TREASURE)
+    {
+        int cx = MAP_WIDTH / 2;
+        int cy = MAP_HEIGHT / 2;
+
+        r->tiles[cy][cx] = TILE_CHEST_CLOSED;
     }
 }
 
@@ -379,10 +416,20 @@ static Rectangle GetTile(int col, int row)
 static Rectangle GetDoorTile(int col, int row)
 {
     return (Rectangle){
-        col * 32,   // porta é 32x32 nesse sheet
+        col * 32,
         row * 24,
         32,
         24
+    };
+}
+
+static Rectangle GetChestTile(int col, int row)
+{
+    return (Rectangle){
+        col * 4,
+        row * 4,
+        16,
+        16
     };
 }
 
@@ -433,7 +480,7 @@ void DrawMap(Map map)
             // PORTA ABERTA
             else if (t == TILE_DOOR)
             {
-                // ajusta (col,row) conforme o tile de porta da sua spritesheet
+                // ajusta (col,row) conforme o tile de porta da spritesheet
                 src = GetDoorTile(4, 0);
                 DrawTexturePro(
                     doorTex,
@@ -459,16 +506,44 @@ void DrawMap(Map map)
                 );
             }
 
-            // 3) ARMADILHA (só cor por enquanto)
+            // ARMADILHA
             else if (t == TILE_TRAP)
             {
                 DrawRectangleRec(tileRec, MAROON);
             }
 
-            // 4) CHÃO (usa floorTex)
+            // BAÚ FECHADO
+            else if (t == TILE_CHEST_CLOSED)
+            {
+                src = GetChestTile(2, 33);
+                DrawTexturePro(
+                    doorTex,       // isso aq é pq os sprites do baú estão no mesmo spritesheet das portas
+                    src,
+                    dest,
+                    (Vector2){0,0},
+                    0,
+                    WHITE
+                );
+            }
+
+            // BAÚ ABERTO
+            else if (t == TILE_CHEST_OPEN)
+            {
+                src = GetChestTile(34, 33);
+                DrawTexturePro(
+                    doorTex,
+                    src,
+                    dest,
+                    (Vector2){0,0},
+                    0,
+                    WHITE
+                );
+            }
+
+            // CHÃO
             else
             {
-                // ajusta (col,row) pro tile de piso que você quiser
+                // ajusta (col,row) pro tile de piso que quiser
                 src = GetTile(0, 0);
                 DrawTexturePro(
                     floorTex,

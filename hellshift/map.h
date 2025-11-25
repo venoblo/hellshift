@@ -9,6 +9,7 @@ struct Player;
 // tamanho do mapa (= tamanho de UMA SALA)
 #define MAP_WIDTH   20
 #define MAP_HEIGHT  12
+
 #define SPRITE_SIZE 16
 #define TILE_SIZE   32
 
@@ -27,8 +28,12 @@ struct Player;
 #define TILE_WALL_BR      8
 
 #define TILE_TRAP 9
+
 #define TILE_DOOR 10
 #define TILE_DOOR_CLOSED 11
+
+#define TILE_CHEST_CLOSED  12
+#define TILE_CHEST_OPEN     13
 
 #define MAX_ROOMS 20   // quantidade máxima de salas na dungeon
 
@@ -91,5 +96,8 @@ void DrawMiniMap(Map *map, bool expanded);
 // textura do mapa
 void LoadMapTextures(void);
 void UnloadMapTextures(void);
+
+// cura o player ao abrir bau
+bool TryOpenChest(Map *map, struct Player *p);
 
 #endif

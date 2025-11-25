@@ -292,6 +292,12 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
 
 
     // ação jogadores vivos
+
+    if (TryOpenChest(map, p)) // Tenta abrir baú
+    {
+        return;
+    }
+
     if (IsKeyPressed(p->keyAction)) {
 
         p->state = PLAYER_ATTACK;
