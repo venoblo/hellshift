@@ -305,10 +305,10 @@ void SpawnMonster(Vector2 position, MonsterType type) {
         novoMonstro->data.texHurt   = skSprites[v].hurt;
         novoMonstro->data.texDeath  = skSprites[v].death;
 
-        // STATS + COR NORMAIS
-        novoMonstro->data.life = 100;
+        // stats + cor normal
+        novoMonstro->data.life = 70;
         novoMonstro->data.speed = 1.0f;
-        novoMonstro->data.color = WHITE;     // <--- ESSENCIAL
+        novoMonstro->data.color = WHITE;     // 
         novoMonstro->data.activeRange = 190.0f;
 
     } else {

@@ -133,9 +133,7 @@ int main(void)
 
     while (!WindowShouldClose())
     {
-        // ============================================================
-        // 1. LÓGICA (UPDATE) - Acontece ANTES de desenhar
-        // ============================================================
+        // lógica
         
         if (currentScreen == SCREEN_MAIN_MENU) {
             if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) mainMenuSelection--;
@@ -162,7 +160,7 @@ int main(void)
             }
         }
 
-        // 2. SELEÇÃO DE SLOT (Genérica)
+        // seleção de slot
         else if (currentScreen == SCREEN_SLOT_SELECT) {
             if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) saveSlotSelection--;
             if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) saveSlotSelection++;
