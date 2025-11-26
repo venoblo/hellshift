@@ -53,8 +53,8 @@ void InitPlayerClassStats(Player *p) {
     // Lógica SWITCH/CASE para aplicar as estatísticas
     if (p->playerclass == CLASS_GUERREIRO) {
         // Stats do Guerreiro (Tanque)
-        p->maxLife = 100;
-        p->life = 100;
+        p->maxLife = 800;
+        p->life = 800;
         p->speed = 2.0f; // Mais lento
 
         p->texIdle    = LoadTexture("resources/characters/warriorp1/Knight-Idle.png");
@@ -66,8 +66,8 @@ void InitPlayerClassStats(Player *p) {
     } 
     else if (p->playerclass == CLASS_MAGO) {
         // Stats do Mago
-        p->maxLife = 80;
-        p->life = 80;
+        p->maxLife = 500;
+        p->life = 500;
         p->speed = 2.5f; 
         
         // --- CARREGAMENTO DAS SPRITES DO MAGO  ---
@@ -319,7 +319,7 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         // 2. Ataque Guerreiro (Melee)
         else if (p->playerclass == CLASS_GUERREIRO) {
             float alcanceEspada = 100.0f;
-            int dano = 25; 
+            int dano = 100; 
             
             // Chama a função que criamos no monster.c
             int pontos = CheckMeleeAttack(p->position, alcanceEspada, dano);

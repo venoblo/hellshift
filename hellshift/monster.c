@@ -12,6 +12,8 @@ static MonsterNode *listaDeMonstros = NULL;
 #define MONSTER_ATTACK_SPEED 0.10f
 #define ORC_SCALE 3.0f
 #define SLIME_SCALE 2.0f
+#define BOSS_SCALE 3.5f
+#define DEMON_BOSS_SCALE 2.0f   
 
 typedef struct OrcSprites {
     Texture2D idle, walk, attack, hurt, death;
@@ -76,14 +78,12 @@ static const int orcMaxFrames[ORC_VARIANT_COUNT][5] = {
     [ORC_NORMAL]  = {6, 8, 6, 4, 4},
     [ORC_ARMORED] = {6, 8, 7, 4, 4},
     [ORC_ELITE]   = {6, 8, 9, 4, 4},
-    [ORC_RIDER]   = {6, 8,11, 4, 4}
 };
 
 static const float orcAttackAnimSpeed[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 0.10f,
     [ORC_ARMORED] = 0.10f,
     [ORC_ELITE]   = 0.14f,  // Elite mais lento
-    [ORC_RIDER]   = 0.18f   // Rider mais lento ainda
 };
 
 // cooldown só pra elite/rider
@@ -91,7 +91,6 @@ static const float orcAttackCooldown[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 0.0f,
     [ORC_ARMORED] = 0.0f,
     [ORC_ELITE]   = 0.8f,   // Elite cooldown
-    [ORC_RIDER]   = 1.3f    // Rider cooldown maior
 };
 
 // ===== STATS (edite aqui quando quiser) =====
@@ -99,28 +98,24 @@ static const int orcLife[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 65,
     [ORC_ARMORED] = 80,
     [ORC_ELITE]   = 100,
-    [ORC_RIDER]   = 120
 };
 
 static const float orcMoveSpeed[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 1.0f,
     [ORC_ARMORED] = 1.0f,
     [ORC_ELITE]   = 1.0f,
-    [ORC_RIDER]   = 0.7f   // Rider mais lento
 };
 
 static const int orcDamage[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 10,
     [ORC_ARMORED] = 10,
     [ORC_ELITE]   = 15,
-    [ORC_RIDER]   = 20
 };
 
 static const float orcActiveRange[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 200.0f,
     [ORC_ARMORED] = 200.0f,
     [ORC_ELITE]   = 220.0f,
-    [ORC_RIDER]   = 220.0f
 };
 
 
@@ -141,6 +136,62 @@ static const int slimeLife = 50;
 static const float slimeMoveSpeed = 0.8f; 
 static const int slimeDamage = 5;
 static const float slimeActiveRange = 180.0f;
+
+typedef struct BossSprites {
+    Texture2D idle, walk, attack, hurt, death, transition;
+} BossSprites;
+
+static bool bossTexturesLoaded = false;
+static BossSprites bossSprites[4]; 
+// 0 = Werewolf, 1 = Werebear, 2 = Orc Rider, 3 = Demon
+
+typedef enum {
+    BOSS_WEREWOLF = 0,
+    BOSS_WEREBEAR,
+    BOSS_ORC_RIDER,
+    BOSS_DEMON,
+    BOSS_COUNT
+} BossIndex;
+
+static const int bossMaxFrames[BOSS_COUNT][6] = {
+    // idle, walk, attack, hurt, death, transition
+    [BOSS_WEREWOLF] = {6, 8, 9, 4, 4, 0},
+    [BOSS_WEREBEAR] = {6, 8, 9, 4, 4, 0},
+    [BOSS_ORC_RIDER]= {6, 8,11, 4, 4, 0},
+    [BOSS_DEMON]    = {4, 4, 6, 3,10, 3}
+};
+static const float bossAttackAnimSpeed[4] = {
+    0.14f,  // Werewolf
+    0.14f,  // Werebear
+    0.18f,  // Orc Rider boss
+    0.16f   // Demon
+};
+
+typedef struct BossStats {
+    int life;
+    int damage;
+    float speed;
+    float activeRange;
+    float attackCooldown;
+} BossStats;
+
+// aqui você edita vida/dano/etc dos bosses
+static const BossStats bossStats[4] = {
+    {250, 20, 1.6f, 220.0f, 0.8f},   // Werewolf
+    {320, 25, 1.3f, 200.0f, 1.0f},   // Werebear
+    {380, 30, 1.4f, 230.0f, 1.2f},   // Orc Rider boss
+    {500, 35, 1.8f, 260.0f, 0.9f}    // Demon
+};
+
+static int BossTypeToIndex(MonsterType t) {
+    switch (t) {
+        case MONSTER_BOSS_WEREWOLF:  return 0;
+        case MONSTER_BOSS_WEREBEAR:  return 1;
+        case MONSTER_BOSS_ORC_RIDER: return 2;
+        case MONSTER_BOSS_DEMON:     return 3;
+        default: return -1;
+    }
+}
 
 
 int GetSkeletonMaxFrames(SkeletonVariant v, MonsterAnimState st) {
@@ -204,12 +255,6 @@ static void LoadOrcTexturesOnce(void) {
     orcSprites[ORC_ELITE].hurt   = LoadTexture("resources/monsters/elite-orc/Elite Orc-Hurt.png");
     orcSprites[ORC_ELITE].death  = LoadTexture("resources/monsters/elite-orc/Elite Orc-Death.png");
 
-    orcSprites[ORC_RIDER].idle   = LoadTexture("resources/monsters/orc-rider/Orc Rider-Idle.png");
-    orcSprites[ORC_RIDER].walk   = LoadTexture("resources/monsters/orc-rider/Orc Rider-Walk.png");
-    orcSprites[ORC_RIDER].attack = LoadTexture("resources/monsters/orc-rider/Orc Rider-Attack.png");
-    orcSprites[ORC_RIDER].hurt   = LoadTexture("resources/monsters/orc-rider/Orc Rider-Hurt.png");
-    orcSprites[ORC_RIDER].death  = LoadTexture("resources/monsters/orc-rider/Orc Rider-Death.png");
-
     orcTexturesLoaded = true;
 }
 
@@ -266,8 +311,62 @@ static void UnloadSkeletonTexturesOnce(void) {
     skeletonTexturesLoaded = false;
 }
 
+static void LoadBossTexturesOnce(void) {
+    if (bossTexturesLoaded) return;
+
+    // Werewolf
+    bossSprites[0].idle   = LoadTexture("resources/bosses/werewolf/Werewolf-Idle.png");
+    bossSprites[0].walk   = LoadTexture("resources/bosses/werewolf/Werewolf-Walk.png");
+    bossSprites[0].attack = LoadTexture("resources/bosses/werewolf/Werewolf-Attack.png");
+    bossSprites[0].hurt   = LoadTexture("resources/bosses/werewolf/Werewolf-Hurt.png");
+    bossSprites[0].death  = LoadTexture("resources/bosses/werewolf/Werewolf-Death.png");
+
+    // Werebear
+    bossSprites[1].idle   = LoadTexture("resources/bosses/werebear/Werebear-Idle.png");
+    bossSprites[1].walk   = LoadTexture("resources/bosses/werebear/Werebear-Walk.png");
+    bossSprites[1].attack = LoadTexture("resources/bosses/werebear/Werebear-Attack.png");
+    bossSprites[1].hurt   = LoadTexture("resources/bosses/werebear/Werebear-Hurt.png");
+    bossSprites[1].death  = LoadTexture("resources/bosses/werebear/Werebear-Death.png");
+
+    // Orc Rider (boss)
+    bossSprites[2].idle   = LoadTexture("resources/bosses/orc-rider/Orc Rider-Idle.png");
+    bossSprites[2].walk   = LoadTexture("resources/bosses/orc-rider/Orc Rider-Walk.png");
+    bossSprites[2].attack = LoadTexture("resources/bosses/orc-rider/Orc Rider-Attack.png");
+    bossSprites[2].hurt   = LoadTexture("resources/bosses/orc-rider/Orc Rider-Hurt.png");
+    bossSprites[2].death  = LoadTexture("resources/bosses/orc-rider/Orc Rider-Death.png");
+
+    // Demon – WALK usa o Flying
+    bossSprites[3].idle   = LoadTexture("resources/bosses/demon/Demon-Idle.png");
+    bossSprites[3].walk   = LoadTexture("resources/bosses/demon/Demon-Flying.png");
+    bossSprites[3].attack = LoadTexture("resources/bosses/demon/Demon-Attack.png");
+    bossSprites[3].hurt   = LoadTexture("resources/bosses/demon/Demon-Hurt.png");
+    bossSprites[3].death  = LoadTexture("resources/bosses/demon/Demon-Death.png");
+    bossSprites[3].transition = LoadTexture("resources/bosses/demon/Demon-Transition.png"); 
+
+    bossTexturesLoaded = true;
+}
+
+static void UnloadBossTexturesOnce(void) {
+    if (!bossTexturesLoaded) return;
+
+    for (int i = 0; i < 4; i++) {
+        if (bossSprites[i].idle.id)   UnloadTexture(bossSprites[i].idle);
+        if (bossSprites[i].walk.id)   UnloadTexture(bossSprites[i].walk);
+        if (bossSprites[i].attack.id) UnloadTexture(bossSprites[i].attack);
+        if (bossSprites[i].hurt.id)   UnloadTexture(bossSprites[i].hurt);
+        if (bossSprites[i].death.id)  UnloadTexture(bossSprites[i].death);
+    }
+
+    bossTexturesLoaded = false;
+}
+
+
 
 int GetMonsterMaxFramesGeneric(Monster *m, MonsterAnimState st) {
+    // ignora TRANSITION para os outros monstros
+    if (st < MONSTER_IDLE || st > MONSTER_DEATH)
+        st = MONSTER_IDLE;
+
     if (m->type == MONSTER_SKELETON) {
         return GetSkeletonMaxFrames(m->skelVariant, st);
     }
@@ -279,10 +378,26 @@ int GetMonsterMaxFramesGeneric(Monster *m, MonsterAnimState st) {
     if (m->type == MONSTER_SLIME) {
         return slimeMaxFrames[st];
     }
+
+    // ====== BOSSES ======
+    int bossIdx = BossTypeToIndex(m->type);
+    if (bossIdx >= 0) {
+        int col = (int)st;
+        if (st == MONSTER_TRANSITION) col = 5; //  transition
+        if (col < 0 || col > 5) col = 0;
+        return bossMaxFrames[bossIdx][col];
+    }
+
     return 1;
 }
 
 float GetMonsterAttackAnimSpeedGeneric(Monster *m) {
+
+    int idx = BossTypeToIndex(m->type);
+    if (idx >= 0) {
+        return bossAttackAnimSpeed[idx];
+    }
+
     if (m->type == MONSTER_SKELETON) {
         return GetSkeletonAttackAnimSpeed(m->skelVariant);
     }
@@ -370,11 +485,8 @@ void ImportMonsters(SaveData data) {
 // Desenho melhorado para identificar quem é quem
 static void DrawOneMonster(Monster m) {
 
-    // se não tem sprite carregada, fallback simples
-    bool hasSprite =
-        (m.type == MONSTER_SKELETON && skeletonTexturesLoaded) ||
-        (m.type == MONSTER_ORC && orcTexturesLoaded) ||
-        (m.type == MONSTER_SLIME && slimeTexturesLoaded);
+    bool hasSprite = (m.texIdle.id != 0);
+
 
     if (!hasSprite) {
         DrawRectangleV(m.position, (Vector2){30, 30}, (m.type==MONSTER_SLIME? GREEN : BEIGE));
@@ -389,6 +501,12 @@ static void DrawOneMonster(Monster m) {
         case MONSTER_ATTACK: texToDraw = m.texAttack; break;
         case MONSTER_HURT:   texToDraw = m.texHurt;   break;
         case MONSTER_DEATH:  texToDraw = m.texDeath;  break;
+        case MONSTER_TRANSITION: 
+        if (m.type == MONSTER_BOSS_DEMON && m.texTransition.id != 0)
+            texToDraw = m.texTransition;
+        else
+            texToDraw = m.texWalk; // fallback
+        break;
         default: break;
     }
 
@@ -405,8 +523,22 @@ static void DrawOneMonster(Monster m) {
     Vector2 center = { m.position.x + 15, m.position.y + 15 };
 
     float scale = SKELETON_SCALE;
-    if (m.type == MONSTER_ORC) scale = ORC_SCALE;
-    if (m.type == MONSTER_SLIME) scale = SLIME_SCALE;
+
+    if (m.type == MONSTER_ORC) {
+        scale = ORC_SCALE;
+    }
+    else if (m.type == MONSTER_SLIME) {
+        scale = SLIME_SCALE;
+    }
+    else if (BossTypeToIndex(m.type) >= 0) { 
+        if (m.type == MONSTER_BOSS_DEMON) {
+            scale = DEMON_BOSS_SCALE;   // demon
+        } else {
+            scale = BOSS_SCALE;         // werewolf, werebear, orc rider
+        }
+    }
+
+
 
     Rectangle destRec = {
         center.x,
@@ -427,7 +559,21 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
     Vector2 monsterCenter = { m->position.x + 15, m->position.y + 15 };
     float distance = Vector2Distance(monsterCenter, targetPos);
 
-   bool isMeleeAnimated = (m->type == MONSTER_SKELETON ||m->type == MONSTER_ORC ||m->type == MONSTER_SLIME);
+    bool isBoss = (
+        m->type == MONSTER_BOSS_WEREWOLF  ||
+        m->type == MONSTER_BOSS_WEREBEAR  ||
+        m->type == MONSTER_BOSS_ORC_RIDER ||
+        m->type == MONSTER_BOSS_DEMON
+    );
+
+    bool isMeleeAnimated = (
+        m->type == MONSTER_SKELETON ||
+        m->type == MONSTER_ORC      ||
+        m->type == MONSTER_SLIME    ||
+        isBoss
+    );
+
+    bool isDemon = (m->type == MONSTER_BOSS_DEMON);
 
     // baixa cooldown sempre
     if (m->attackCooldownTimer > 0) {
@@ -474,17 +620,28 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
                 m->state = MONSTER_ATTACK;
             }
             else if (canMove) {
-                m->state = MONSTER_WALK;
+                if (isDemon && m->state == MONSTER_IDLE) {
+                    // toca a transition
+                    m->state        = MONSTER_TRANSITION;
+                    m->currentFrame = 0;
+                    m->frameTime    = 0.0f;
+                } else if (m->state != MONSTER_TRANSITION) {
+                    // qualquer outro monster ou demon já transicionado
+                    m->state = MONSTER_WALK;
+                }
             }
             else {
                 m->state = MONSTER_IDLE;
             }
         }
 
+
         float animSpeed = MONSTER_ANIM_SPEED;
         if (m->state == MONSTER_ATTACK) animSpeed = GetMonsterAttackAnimSpeedGeneric(m);
         if (m->state == MONSTER_HURT)   animSpeed = 0.08f;
         if (m->state == MONSTER_DEATH)  animSpeed = 0.12f;
+        if (m->state == MONSTER_TRANSITION) animSpeed = 0.10f;
+
 
         m->frameTime += GetFrameTime();
         if (m->frameTime >= animSpeed) {
@@ -507,6 +664,10 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
                     m->attackCooldownTimer = m->attackCooldown;
                     m->state = MONSTER_IDLE;
                 }
+                else if (m->state == MONSTER_TRANSITION && isDemon) {
+                    m->state = MONSTER_WALK;
+                    m->currentFrame = 0;
+                }
                 else {
                     m->currentFrame = 0;
                 }
@@ -521,10 +682,9 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
 static OrcVariant RollOrcVariantWeighted(void) {
     // Rider mais raro
     int roll = GetRandomValue(0, 99);
-    if (roll < 50) return ORC_NORMAL;      // 50%
-    if (roll < 75) return ORC_ARMORED;     // 25%
-    if (roll < 90) return ORC_ELITE;       // 15%
-    return ORC_RIDER;                     // 10%
+    if (roll < 55) return ORC_NORMAL;      // 55%
+    if (roll < 85) return ORC_ARMORED;     // 30% 
+    return ORC_ELITE; // 15%
 }
 
 void SpawnMonster(Vector2 position, MonsterType type) {
@@ -545,6 +705,30 @@ void SpawnMonster(Vector2 position, MonsterType type) {
 
     m->attackCooldown = 0.0f;
     m->attackCooldownTimer = 0.0f;
+
+    int bossIdx = BossTypeToIndex(type);
+    if (bossIdx >= 0) {
+        LoadBossTexturesOnce();
+
+        m->texIdle   = bossSprites[bossIdx].idle;
+        m->texWalk   = bossSprites[bossIdx].walk;
+        m->texAttack = bossSprites[bossIdx].attack;
+        m->texHurt   = bossSprites[bossIdx].hurt;
+        m->texDeath  = bossSprites[bossIdx].death;
+        m->texTransition = bossSprites[bossIdx].transition;
+
+        BossStats st = bossStats[bossIdx];
+        m->life            = st.life;
+        m->damage          = st.damage;
+        m->speed           = st.speed;
+        m->activeRange     = st.activeRange;
+        m->attackCooldown  = st.attackCooldown;
+        m->color           = WHITE;
+
+        novoMonstro->next = listaDeMonstros;
+        listaDeMonstros   = novoMonstro;
+        return;
+    }
 
     if (type == MONSTER_SKELETON) {
         LoadSkeletonTexturesOnce();
@@ -634,7 +818,7 @@ void UpdateMonsters(Player *p1, Player *p2, int numPlayers, Map *map) {
         bool possessedByP1 = (p1->isPossessing && (MonsterNode*)p1->possessedMonster == current);
         bool possessedByP2 = (numPlayers == 2 && p2->isPossessing && (MonsterNode*)p2->possessedMonster == current);
 
-        bool isAnimatedType = (current->data.type == MONSTER_SKELETON || current->data.type == MONSTER_ORC || current->data.type == MONSTER_SLIME);
+        bool isAnimatedType = (current->data.type == MONSTER_SKELETON || current->data.type == MONSTER_ORC || current->data.type == MONSTER_SLIME || BossTypeToIndex(current->data.type) >= 0);
 
         if (!possessedByP1 && !possessedByP2 &&
             isAnimatedType &&
@@ -708,11 +892,13 @@ void UnloadMonsters(void) {
         free(current);        
         current = next;       
     }
+
     listaDeMonstros = NULL;
-    UnloadSkeletonTexturesOnce();
     UnloadSkeletonTexturesOnce();
     UnloadOrcTexturesOnce();
     UnloadSlimeTexturesOnce();
+    UnloadBossTexturesOnce();
+
 
 }
 
@@ -737,6 +923,7 @@ int CheckMonsterCollision(Rectangle rect) {
             || current->data.type == MONSTER_ELITE_ORC
             || current->data.type == MONSTER_ORC_RIDER
             || current->data.type == MONSTER_SLIME
+            || BossTypeToIndex(current->data.type) >= 0
             );
             
             // se já está morrendo, não toma dano de novo
@@ -834,6 +1021,7 @@ int CheckMeleeAttack(Vector2 playerPos, float range, int damage) {
             || current->data.type == MONSTER_ELITE_ORC
             || current->data.type == MONSTER_ORC_RIDER
             || current->data.type == MONSTER_SLIME
+            || BossTypeToIndex(current->data.type) >= 0
             );
             // se já está morrendo, ignora
             if (isAnimatedType && current->data.state == MONSTER_DEATH) {
