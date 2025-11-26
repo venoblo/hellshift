@@ -12,6 +12,8 @@ static MonsterNode *listaDeMonstros = NULL;
 #define MONSTER_ATTACK_SPEED 0.10f
 #define ORC_SCALE 3.0f
 #define SLIME_SCALE 2.0f
+#define BOSS_SCALE 3.5f
+#define DEMON_BOSS_SCALE 2.0f   
 
 typedef struct OrcSprites {
     Texture2D idle, walk, attack, hurt, death;
@@ -134,8 +136,6 @@ static const int slimeLife = 50;
 static const float slimeMoveSpeed = 0.8f; 
 static const int slimeDamage = 5;
 static const float slimeActiveRange = 180.0f;
-
-#define BOSS_SCALE 3.5f
 
 typedef struct BossSprites {
     Texture2D idle, walk, attack, hurt, death, transition;
@@ -523,12 +523,21 @@ static void DrawOneMonster(Monster m) {
     Vector2 center = { m.position.x + 15, m.position.y + 15 };
 
     float scale = SKELETON_SCALE;
-    if (m.type == MONSTER_ORC) scale = ORC_SCALE;
-    if (m.type == MONSTER_SLIME) scale = SLIME_SCALE;
 
-    if (BossTypeToIndex(m.type) >= 0) {
-        scale = BOSS_SCALE;
+    if (m.type == MONSTER_ORC) {
+        scale = ORC_SCALE;
     }
+    else if (m.type == MONSTER_SLIME) {
+        scale = SLIME_SCALE;
+    }
+    else if (BossTypeToIndex(m.type) >= 0) { 
+        if (m.type == MONSTER_BOSS_DEMON) {
+            scale = DEMON_BOSS_SCALE;   // demon
+        } else {
+            scale = BOSS_SCALE;         // werewolf, werebear, orc rider
+        }
+    }
+
 
 
     Rectangle destRec = {
