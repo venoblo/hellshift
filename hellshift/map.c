@@ -78,31 +78,55 @@ static int FindRoom(Dungeon *d, int gx, int gy) {
 static void BuildRoom(Room *r) {
 
     for (int y = 0; y < MAP_HEIGHT; y++) {
-    for (int x = 0; x < MAP_WIDTH; x++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
 
-        // Cantos
-        if (x == 0 && y == 0)
-            r->tiles[y][x] = TILE_WALL_TL;
-        else if (x == MAP_WIDTH - 1 && y == 0)
-            r->tiles[y][x] = TILE_WALL_TR;
-        else if (x == 0 && y == MAP_HEIGHT - 1)
-            r->tiles[y][x] = TILE_WALL_BL;
-        else if (x == MAP_WIDTH - 1 && y == MAP_HEIGHT - 1)
-            r->tiles[y][x] = TILE_WALL_BR;
+            // Cantos
+            if (x == 0 && y == 0)
+                r->tiles[y][x] = TILE_WALL_TL;
+            else if (x == MAP_WIDTH - 1 && y == 0)
+                r->tiles[y][x] = TILE_WALL_TR;
+            else if (x == 0 && y == MAP_HEIGHT - 1)
+                r->tiles[y][x] = TILE_WALL_BL;
+            else if (x == MAP_WIDTH - 1 && y == MAP_HEIGHT - 1)
+                r->tiles[y][x] = TILE_WALL_BR;
 
-        // Bordas
-        else if (y == 0)
-            r->tiles[y][x] = TILE_WALL_TOP;
-        else if (y == MAP_HEIGHT - 1)
-            r->tiles[y][x] = TILE_WALL_BOTTOM;
-        else if (x == 0)
-            r->tiles[y][x] = TILE_WALL_LEFT;
-        else if (x == MAP_WIDTH - 1)
-            r->tiles[y][x] = TILE_WALL_RIGHT;
+            // Bordas
+            else if (y == 0)
+                r->tiles[y][x] = TILE_WALL_TOP;
+            else if (y == MAP_HEIGHT - 1)
+                r->tiles[y][x] = TILE_WALL_BOTTOM;
+            else if (x == 0)
+                r->tiles[y][x] = TILE_WALL_LEFT;
+            else if (x == MAP_WIDTH - 1)
+                r->tiles[y][x] = TILE_WALL_RIGHT;
 
-        // Chão
-        else
-            r->tiles[y][x] = TILE_EMPTY;
+            // Chão
+            else
+            {
+                int rdm = GetRandomValue(0, 100);
+
+                if (rdm < 5) r->tiles[y][x] = FLOOR_1;
+                else if (rdm < 10) r->tiles[y][x] = FLOOR_2;
+                else if (rdm < 15) r->tiles[y][x] = FLOOR_3;
+                else if (rdm < 20) r->tiles[y][x] = FLOOR_4;
+                else if (rdm < 25) r->tiles[y][x] = FLOOR_5;
+                else if (rdm < 30) r->tiles[y][x] = FLOOR_6;
+                else if (rdm < 35) r->tiles[y][x] = FLOOR_7;
+                else if (rdm < 40) r->tiles[y][x] = FLOOR_8;
+                else if (rdm < 45) r->tiles[y][x] = FLOOR_9;
+                else if (rdm < 50) r->tiles[y][x] = FLOOR_10;
+                else if (rdm < 55) r->tiles[y][x] = FLOOR_11;
+                else if (rdm < 60) r->tiles[y][x] = FLOOR_12;
+                else if (rdm < 65) r->tiles[y][x] = FLOOR_13;
+                else if (rdm < 70) r->tiles[y][x] = FLOOR_14;
+                else if (rdm < 75) r->tiles[y][x] = FLOOR_15;
+                else if (rdm < 80) r->tiles[y][x] = FLOOR_16;
+                else if (rdm < 85) r->tiles[y][x] = FLOOR_17;
+                else if (rdm < 90) r->tiles[y][x] = FLOOR_18;
+                else if (rdm < 95) r->tiles[y][x] = FLOOR_19;
+                else if (rdm < 97) r->tiles[y][x] = FLOOR_20;
+                else r->tiles[y][x] = FLOOR_21;
+            }
         }
     }
 
@@ -373,7 +397,7 @@ Texture2D doorTex;
 void LoadMapTextures(void)
 {
     wallTex = LoadTexture("resources/tiles/decorative_cracks_walls.png");
-    floorTex = LoadTexture("resources/tiles/decorative_cracks_floor.png");
+    floorTex = LoadTexture("resources/tiles/Tileset.png");
     doorTex = LoadTexture("resources/tiles/doors_lever_chest_animation.png");
 
     printf("Wall ID: %d\n", wallTex.id);
@@ -541,10 +565,34 @@ void DrawMap(Map map)
             }
 
             // CHÃO
-            else
+            else if (t >= FLOOR_1 && t <= FLOOR_21)
             {
-                // ajusta (col,row) pro tile de piso que quiser
-                src = GetTile(0, 0);
+                switch (t)
+                {
+                    case FLOOR_1: src = GetTile(2, 2); break;
+                    case FLOOR_2: src = GetTile(3, 2); break;
+                    case FLOOR_3: src = GetTile(4, 2); break;
+                    case FLOOR_4: src = GetTile(2, 3); break;
+                    case FLOOR_5: src = GetTile(3, 3); break;
+                    case FLOOR_6: src = GetTile(4, 3); break;
+                    case FLOOR_7: src = GetTile(2, 4); break;
+                    case FLOOR_8: src = GetTile(3, 4); break;
+                    case FLOOR_9: src = GetTile(4, 4); break;
+                    case FLOOR_10: src = GetTile(15, 6); break;
+                    case FLOOR_11: src = GetTile(15, 7); break;
+                    case FLOOR_12: src = GetTile(15, 8); break;
+                    case FLOOR_13: src = GetTile(15, 9); break;
+                    case FLOOR_14: src = GetTile(16, 6); break;
+                    case FLOOR_15: src = GetTile(16, 7); break;
+                    case FLOOR_16: src = GetTile(16, 8); break;
+                    case FLOOR_17: src = GetTile(16, 9); break;
+                    case FLOOR_18: src = GetTile(17, 6); break;
+                    case FLOOR_19: src = GetTile(17, 7); break;
+                    case FLOOR_20: src = GetTile(17, 8); break;
+                    case FLOOR_21: src = GetTile(17, 9); break;
+                    default:      src = GetTile(0, 0); break;
+                }
+
                 DrawTexturePro(
                     floorTex,
                     src,

@@ -35,6 +35,28 @@ struct Player;
 #define TILE_CHEST_CLOSED  12
 #define TILE_CHEST_OPEN     13
 
+#define FLOOR_1 14
+#define FLOOR_2 15
+#define FLOOR_3 16
+#define FLOOR_4 17
+#define FLOOR_5 18
+#define FLOOR_6 19
+#define FLOOR_7 20
+#define FLOOR_8 21
+#define FLOOR_9 22
+#define FLOOR_10 23
+#define FLOOR_11 24
+#define FLOOR_12 25
+#define FLOOR_13 26
+#define FLOOR_14 27
+#define FLOOR_15 28
+#define FLOOR_16 29
+#define FLOOR_17 30
+#define FLOOR_18 31
+#define FLOOR_19 32
+#define FLOOR_20 33
+#define FLOOR_21 34
+
 #define MAX_ROOMS 20   // quantidade máxima de salas na dungeon
 
 // Tipo de sala
