@@ -16,7 +16,8 @@ typedef enum MonsterAnimState {
     MONSTER_WALK,
     MONSTER_ATTACK,
     MONSTER_HURT,
-    MONSTER_DEATH
+    MONSTER_DEATH,
+    MONSTER_TRANSITION  
 } MonsterAnimState;
 
 typedef enum SkeletonVariant {
@@ -30,7 +31,6 @@ typedef enum OrcVariant {
     ORC_NORMAL = 0,
     ORC_ARMORED,
     ORC_ELITE,
-    ORC_RIDER,
     ORC_VARIANT_COUNT
 } OrcVariant;
 
@@ -54,7 +54,14 @@ typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro 
     MONSTER_ARMORED_ORC,
     MONSTER_ELITE_ORC,
     MONSTER_ORC_RIDER,
-    MONSTER_SLIME
+    MONSTER_SLIME,
+
+    // bosses
+
+    MONSTER_BOSS_WEREWOLF,
+    MONSTER_BOSS_WEREBEAR,
+    MONSTER_BOSS_ORC_RIDER,
+    MONSTER_BOSS_DEMON
 }MonsterType;
 
 typedef struct Monster {
@@ -85,6 +92,9 @@ typedef struct Monster {
     Texture2D texAttack;
     Texture2D texHurt;
     Texture2D texDeath;
+    Texture2D texTransition;
+    // demonio
+    bool demonTransitionPlaying;
 } Monster;
 
 

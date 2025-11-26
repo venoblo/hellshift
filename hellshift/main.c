@@ -551,7 +551,7 @@ int main(void)
 
                 if (r->type == ROOM_BOSS && r->portalActive && IsKeyPressed(KEY_E)) {
 
-                    if (mapa.dungeon.floorLevel >= 7) {
+                    if (mapa.dungeon.floorLevel >= 5) {
                         currentScreen = SCREEN_CREDITS;
                     }
                     else {
@@ -703,7 +703,7 @@ int main(void)
 
                 DrawText(TextFormat("Score: %d", p1.score + p2.score), 350, 10, 20, YELLOW);
 
-                DrawText(TextFormat("FLOOR: %d / 7", mapa.dungeon.floorLevel), 340, 35, 20, RED);
+                DrawText(TextFormat("FLOOR: %d / 5", mapa.dungeon.floorLevel), 340, 35, 20, RED);
 
                 if (GetMonsterCount() == 0) {
                     Room *r = &mapa.dungeon.rooms[mapa.dungeon.currentRoom];

@@ -24,6 +24,24 @@ static MonsterType RollBaseEnemyByFloor(int floor) {
     return MONSTER_ORC;                  // 25%
 }
 
+static MonsterType RollEnemyTypeByFloor(int floor) {
+    int r = GetRandomValue(0, 99);
+
+    if (floor <= 1) {
+        return MONSTER_SKELETON; // só skeleton
+    }
+
+    if (floor == 2) {
+        // skeleton + slime (slime começa aparecer)
+        return (r < 55) ? MONSTER_SKELETON : MONSTER_SLIME;  // 70/30
+    }
+
+    // floor >= 3: orcs maioria
+    if (r < 60) return MONSTER_ORC;        // 70% orc
+    if (r < 80) return MONSTER_SKELETON;   // 15% esqueleto
+    return MONSTER_SLIME;                 // 15% slime
+}
+
 // Copia a sala atual para map->tiles
 static void LoadRoomToMap(Map *map) {
     Room *r = &map->dungeon.rooms[map->dungeon.currentRoom];
@@ -246,6 +264,39 @@ static void GenerateDungeonWithDifficulty(Dungeon *d) {
     d->currentRoom = 0;
 }
 
+static void SpawnBossForFloor(Map *map) {
+    Dungeon *d = &map->dungeon;
+    Room *r = &d->rooms[d->currentRoom];
+
+    float midX = MAP_WIDTH * TILE_SIZE / 2.0f;
+    float midY = MAP_HEIGHT * TILE_SIZE / 2.0f;
+
+    switch (d->floorLevel) {
+        case 1:
+            SpawnMonster((Vector2){ midX, midY }, MONSTER_BOSS_WEREWOLF);
+            break;
+        case 2:
+            SpawnMonster((Vector2){ midX, midY }, MONSTER_BOSS_WEREBEAR);
+            break;
+        case 3:
+            SpawnMonster((Vector2){ midX, midY }, MONSTER_BOSS_ORC_RIDER);
+            break;
+        case 4:
+            SpawnMonster((Vector2){ midX - 60, midY }, MONSTER_BOSS_WEREWOLF);
+            SpawnMonster((Vector2){ midX + 60, midY }, MONSTER_BOSS_WEREBEAR);
+            SpawnMonster((Vector2){ midX, midY - 60 }, MONSTER_BOSS_ORC_RIDER);
+            break;
+        default: //  Demon final
+            SpawnMonster((Vector2){ midX, midY }, MONSTER_BOSS_DEMON);
+            break;
+    }
+
+    r->cleared = true;
+}
+
+
+
+
 // Spawna inimigos na sala atual, escalando com o andar
 static void SpawnRoomEnemies(Map *map) {
 
@@ -258,70 +309,31 @@ static void SpawnRoomEnemies(Map *map) {
         return;
     }
 
-    // Se já foi "limpa"/spawnda antes, não faz nada
+    // se já foi "limpa"/spawnda antes, não faz nada
     if (r->cleared) return;
 
-    // Quantidade de inimigos cresce com o andar
+    // sala de boss usa lógica própria
+    if (r->type == ROOM_BOSS) {
+        SpawnBossForFloor(map);
+        return;
+    }
+
+    // quantidade de inimigos cresce com o andar
     int enemyCount = 2 + GetRandomValue(0, d->floorLevel);
 
     for (int i = 0; i < enemyCount; i++) {
         float px = GetRandomValue(80, 700);
         float py = GetRandomValue(80, 400);
 
-        MonsterType tipo;
-
-        // floor 1: só skeleton
-        if (d->floorLevel == 1) {
-            tipo = MONSTER_SKELETON;
-        }
-        // floor 2: 55/45 skeleton/slime
-        else if (d->floorLevel == 2) {
-            int r = GetRandomValue(0, 99);
-            tipo = (r < 55) ? MONSTER_SKELETON : MONSTER_SLIME;
-        }
-        // floor 3+: 60% orc, 20% skeleton, 20% slime
-        else {
-            int r = GetRandomValue(0, 99);
-            if (r < 60)      tipo = MONSTER_ORC;
-            else if (r < 80) tipo = MONSTER_SKELETON;
-            else             tipo = MONSTER_SLIME;
-        }
-
-        // Em andares mais altos, chance de sombras
-        if (d->floorLevel >= 3 && GetRandomValue(0, 10) > 7) {
-            tipo = MONSTER_SHADOW_MELEE;
-        }
-        if (d->floorLevel >= 5 && GetRandomValue(0, 10) > 8) {
-            tipo = MONSTER_SHADOW_SPELL;
-        }
-
-        // Boss room: garantimos um boss mais forte
-        if (r->type == ROOM_BOSS) {
-            tipo = (i == 0) ? MONSTER_SHADOW_MELEE : MONSTER_SHADOW_SPELL;
-        }
+        // 1º andar: só esqueleto
+        // 2º andar: esqueleto e slime
+        // 3: orc, esqueleto e slime
+        MonsterType tipo = RollEnemyTypeByFloor(d->floorLevel);
 
         SpawnMonster((Vector2){px, py}, tipo);
     }
 
-    r->cleared = true; // marca que essa sala já foi spawnda
-}
-
-static MonsterType RollEnemyTypeByFloor(int floor) {
-    int r = GetRandomValue(0, 99);
-
-    if (floor <= 1) {
-        return MONSTER_SKELETON; // só skeleton
-    }
-
-    if (floor == 2) {
-        // skeleton + slime (slime começa aparecer)
-        return (r < 55) ? MONSTER_SKELETON : MONSTER_SLIME;  // 70/30
-    }
-
-    // floor >= 3: orcs maioria
-    if (r < 60) return MONSTER_ORC;        // 70% orc
-    if (r < 80) return MONSTER_SKELETON;   // 15% esqueleto
-    return MONSTER_SLIME;                 // 15% slime
+    r->cleared = true;
 }
 
 
@@ -627,7 +639,7 @@ void GoToNextFloor(Map *map, Vector2 *p1Pos, Vector2 *p2Pos, int numPlayers) {
     
     map->dungeon.floorLevel++;
 
-    if (map->dungeon.floorLevel > 7)
+    if (map->dungeon.floorLevel > 5)
         return;
 
     UnloadMonsters();
