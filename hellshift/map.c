@@ -163,7 +163,7 @@ static void BuildRoom(Room *r) {
             int rx = GetRandomValue(2, MAP_WIDTH - 3);
             int ry = GetRandomValue(2, MAP_HEIGHT - 3);
 
-            if (r->tiles[ry][rx] == 0)
+            if (r->tiles[ry][rx] >= FLOOR_1 && r->tiles[ry][rx] <= FLOOR_21)
                 r->tiles[ry][rx] = TILE_TRAP;
         }
     }
@@ -405,16 +405,14 @@ static void SpawnRoomEnemies(Map *map) {
 Texture2D wallTex;
 Texture2D floorTex;
 Texture2D doorTex;
+Texture2D trapTex;
 
 void LoadMapTextures(void)
 {
     wallTex = LoadTexture("resources/tiles/decorative_cracks_walls.png");
     floorTex = LoadTexture("resources/tiles/Tileset.png");
     doorTex = LoadTexture("resources/tiles/doors_lever_chest_animation.png");
-
-    printf("Wall ID: %d\n", wallTex.id);
-    printf("Floor ID: %d\n", floorTex.id);
-    printf("Door ID: %d\n", doorTex.id);
+    trapTex = LoadTexture("resources/tiles/Barril_explosivo.png");
 }
 
 void UnloadMapTextures(void)
@@ -430,6 +428,7 @@ void LoadMap(Map *map, const char *fileName) {
     SetTextureFilter(doorTex, TEXTURE_FILTER_POINT);
     SetTextureFilter(wallTex, TEXTURE_FILTER_POINT);
     SetTextureFilter(floorTex, TEXTURE_FILTER_POINT);
+    SetTextureFilter(trapTex, TEXTURE_FILTER_POINT);
 
     map->dungeon.floorLevel = 1;       // começa no andar 1
     GenerateDungeonWithDifficulty(&map->dungeon);
@@ -466,6 +465,16 @@ static Rectangle GetChestTile(int col, int row)
         row * 4,
         16,
         16
+    };
+}
+
+static Rectangle GetTrapTile(int col, int row)
+{
+    return (Rectangle){
+        col * 1,
+        row * 1,
+        37,
+        44
     };
 }
 
@@ -545,7 +554,14 @@ void DrawMap(Map map)
             // ARMADILHA
             else if (t == TILE_TRAP)
             {
-                DrawRectangleRec(tileRec, MAROON);
+                Rectangle src = GetTrapTile(0,0);
+                DrawTexturePro(
+                    trapTex,
+                    src,
+                    dest,
+                    (Vector2){0,0},
+                    0,
+                    WHITE);
             }
 
             // BAÚ FECHADO
@@ -640,13 +656,17 @@ bool CheckTrapInteraction(Map *map, Vector2 worldPos) {
     int mapX = (int)((worldPos.x - MAP_OFFSET_X) / TILE_SIZE);
     int mapY = (int)((worldPos.y - MAP_OFFSET_Y) / TILE_SIZE);
 
-    if (mapX >= 0 && mapX < MAP_WIDTH && mapY >= 0 && mapY < MAP_HEIGHT) {
+    if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT)
+        return false;
 
-        if (map->tiles[mapY][mapX] == TILE_TRAP) {
-            map->tiles[mapY][mapX] = 0;
-            map->dungeon.rooms[map->dungeon.currentRoom].tiles[mapY][mapX] = 0;
-            return true;
-        }
+    if (map->tiles[mapY][mapX] == TILE_TRAP) {
+
+        int newFloor = GetRandomValue(FLOOR_1, FLOOR_21);
+
+        map->tiles[mapY][mapX] = newFloor;
+        map->dungeon.rooms[map->dungeon.currentRoom].tiles[mapY][mapX] = newFloor;
+
+        return true;
     }
 
     return false;
