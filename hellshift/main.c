@@ -8,13 +8,19 @@
 #include "save.h"
 #include "string.h"
 
+Texture2D texMenuBg;
+Texture2D texMenuLogo;
+Texture2D texStoryBg;
+Font fontMenu;
+
 typedef enum GameScreen { 
     SCREEN_MAIN_MENU,
     SCREEN_SLOT_SELECT,
     SCREEN_NAME_INPUT,     
     SCREEN_CONFIRM_OVERWRITE, 
     SCREEN_MSG_EMPTY,     
-    SCREEN_SAVE_SELECT,   
+    SCREEN_SAVE_SELECT,
+    SCREEN_STORY,
     SCREEN_NUM_PLAYERS,   
     SCREEN_CLASS_SELECT,  
     SCREEN_GAMEPLAY,     
@@ -33,6 +39,29 @@ int pausemenu = 0;
 bool level1Started = false;
 bool isSavingMode = false; // true = Salvar/Novo, false = Carregar
 bool isPauseMenu = false;
+
+// cutscene
+const char *storyLines[] = {
+    "Ah... mais mariposas atraidas pela\nminha chama.",
+    "Eu vi voces cruzarem os portoes.\nO Cavaleiro, com sua armadura\nbrilhante escondendo um coracao \nganancioso por gloria.",
+    "E o Mago, cuja sede de poder o cegou\npara a prudencia.",
+    "Voces vieram buscar o \nCoracao do Submundo, nao foi?\nVieram me destronar. Tolos." ,
+    "Voces nao entraram em uma masmorra...\nvoces entraram no meu estomago.",
+    "Este lugar nao segue as leis do\nseu mundo.", 
+    "Aqui, a vida e uma moeda preciosa,\ne a morte... ah, a morte e apenas\numa mudanca de perspectiva.",
+    "Saibam disto: o ar que voces respiram\naqui e feito de traicao.", 
+    "Se um de voces cair,\na pedra fria deste lugar\nsugara sua lealdade.",
+    "Aquele que morrer primeiro descobrira\nque a inveja dos vivos e uma fome\nque nunca passa.",
+    "Voces entrarao como aliados,\nmas imploro que descubram o que se\ntornarao quando o primeiro\nsangue for derramado.",
+    "Parta nessa aventura sozinho,\nou acompanhado, porem, saiba que\nha consequencias…"
+};
+const int STORY_LINES_COUNT = sizeof(storyLines)/sizeof(storyLines[0]);
+int storyCurrentLine = 0;
+int storyCharIndex   = 0;
+float storyTimer     = 0.0f;
+const float STORY_CHAR_DELAY = 0.03f; 
+bool storyLineFinished = false;
+
 
 char tempName[21] = "PLAYER"; 
 int letterCount = 6;
@@ -121,11 +150,17 @@ int main(void)
     const int screenWidth = 800;
     const int screenHeight = 480;
 
-    InitWindow(screenWidth, screenHeight, "Hellshift - Final");
+    InitWindow(screenWidth, screenHeight, "Hellshift");
     LoadMapTextures();
     LoadMap(&mapa, "level1.txt");
     SetTargetFPS(60); 
     SetExitKey(0); 
+
+    texMenuBg   = LoadTexture("resources/menu/masmorra-fundo.png");
+    texMenuLogo = LoadTexture("resources/menu/HELLSHIFTLOGO.png");
+    texStoryBg  = LoadTexture("resources/menu/fundo.png");
+    fontMenu = LoadFontEx("resources/fonts/Righteous.ttf", 32, NULL, 0);
+
 
     GameScreen currentScreen = SCREEN_MAIN_MENU; 
 
@@ -136,25 +171,27 @@ int main(void)
         if (currentScreen == SCREEN_MAIN_MENU) {
             if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) mainMenuSelection--;
             if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) mainMenuSelection++;
-            if (mainMenuSelection < 0) mainMenuSelection = 4;
-            if (mainMenuSelection > 4) mainMenuSelection = 0;
+            if (mainMenuSelection < 0) mainMenuSelection = 2;
+            if (mainMenuSelection > 2) mainMenuSelection = 0;
 
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 switch (mainMenuSelection) {
-                    case 0: // NOVO JOGO
-                        isSavingMode = true; 
-                        isPauseMenu = false; 
-                        currentScreen = SCREEN_SLOT_SELECT; 
-                        break; 
-                    case 1: // CARREGAR JOGO
-                        isSavingMode = false; 
-                        isPauseMenu = false;
-                        currentScreen = SCREEN_SLOT_SELECT; 
-                        break; 
-                    case 2: currentScreen = SCREEN_OPTIONS; break;
-                    case 3: currentScreen = SCREEN_CREDITS; break;
-                    case 4: CloseWindow(); break; 
-                }
+                case 0: // NOVO JOGO
+                    isSavingMode = true; 
+                    isPauseMenu = false; 
+                    currentScreen = SCREEN_SLOT_SELECT; 
+                    break; 
+
+                case 1: // CARREGAR JOGO
+                    isSavingMode = false; 
+                    isPauseMenu = false;
+                    currentScreen = SCREEN_SLOT_SELECT; 
+                    break; 
+
+                case 2: // SAIR
+                    CloseWindow();
+                    break;
+            }
             }
         }
 
@@ -230,7 +267,7 @@ int main(void)
                 ResetPlayers();
                 
                 PerformSave(saveSlotSelection); 
-                currentScreen = SCREEN_NUM_PLAYERS;
+                currentScreen = SCREEN_STORY;
             }
         }
 
@@ -262,6 +299,55 @@ int main(void)
                 currentScreen = SCREEN_SLOT_SELECT;
             }
         }
+
+        else if (currentScreen == SCREEN_STORY) {
+            float dt = GetFrameTime();
+
+            // Avança as letras aos poucos
+            if (!storyLineFinished) {
+                storyTimer += dt;
+                while (storyTimer >= STORY_CHAR_DELAY && !storyLineFinished) {
+                    storyTimer   -= STORY_CHAR_DELAY;
+                    storyCharIndex++;
+
+                    int len = (int)strlen(storyLines[storyCurrentLine]);
+                    if (storyCharIndex >= len) {
+                        storyCharIndex    = len;
+                        storyLineFinished = true;
+                    }
+                }
+            }
+
+            // Enter / Espaço
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                int len = (int)strlen(storyLines[storyCurrentLine]);
+
+                if (!storyLineFinished) {
+                    // mostra a linha inteira de uma vez
+                    storyCharIndex    = len;
+                    storyLineFinished = true;
+                } else {
+                    // Vai para a próxima linha
+                    storyCurrentLine++;
+                    if (storyCurrentLine >= STORY_LINES_COUNT) {
+                        isSavingMode  = true;
+                        isPauseMenu   = false;
+                        currentScreen = SCREEN_NUM_PLAYERS;
+
+                        // reseta para próxima vez que entrar na história
+                        storyCurrentLine   = 0;
+                        storyCharIndex     = 0;
+                        storyTimer         = 0.0f;
+                        storyLineFinished  = false;
+                    } else {
+                        storyCharIndex     = 0;
+                        storyTimer         = 0.0f;
+                        storyLineFinished  = false;
+                    }
+                }
+            }
+        }
+
 
         // --- MENU DE PAUSA ---
         else if (currentScreen == SCREEN_PAUSE) {
@@ -569,100 +655,245 @@ int main(void)
             ClearBackground((Color){20, 20, 30, 255});
 
             if (currentScreen == SCREEN_MAIN_MENU) {
-                DrawText("HELLSHIFT", 300, 50, 40, RED);
-                const char* options[] = {"NOVO JOGO", "CARREGAR JOGO", "OPCOES", "CREDITOS", "SAIR"};
-                for (int i = 0; i < 5; i++) {
+
+                Rectangle src = { 0, 0, (float)texMenuBg.width, (float)texMenuBg.height };
+                Rectangle dst = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
+                DrawTexturePro(texMenuBg, src, dst, (Vector2){ 0, 0 }, 0.0f, WHITE);
+
+                // logo
+                float logoScale = 0.3f; 
+                float logoW = texMenuLogo.width * logoScale;
+                float logoH = texMenuLogo.height * logoScale;
+
+                Vector2 logoPos = {
+                    (GetScreenWidth()  - logoW) / 2.0f,
+                    40.0f
+                };
+
+                DrawTextureEx(texMenuLogo, logoPos, 0.0f, logoScale, WHITE);
+
+            
+                const char* options[] = {
+                    "NOVO JOGO",
+                    "CARREGAR JOGO",
+                    "SAIR"
+                };
+
+                float fontSize = 32.0f;
+                float spacing  = 2.0f;
+                float startY   = 290.0f;   // altura da primeira opção
+                float stepY    = 50.0f;    // distância entre opções
+
+                for (int i = 0; i < 3; i++) {
                     Color c = (i == mainMenuSelection) ? YELLOW : GRAY;
-                    DrawText(options[i], 320, 150 + i*40, 20, c);
-                    if (i == mainMenuSelection) DrawTriangle((Vector2){300, 160 + i*40}, (Vector2){290, 150 + i*40}, (Vector2){290, 170 + i*40}, RED);
+
+                    // centralizar o texto
+                    Vector2 textSize = MeasureTextEx(fontMenu, options[i], fontSize, spacing);
+                    Vector2 textPos = {
+                        (GetScreenWidth() - textSize.x) / 2.0f,
+                        startY + i * stepY
+                    };
+
+                    DrawTextEx(fontMenu, options[i], textPos, fontSize, spacing, c);
+
+                    // Triângulo de seleção à esquerda (adaptado do seu)
+                    if (i == mainMenuSelection) {
+                        DrawTriangle(
+                            (Vector2){ textPos.x - 20,              textPos.y + fontSize/2.0f },
+                            (Vector2){ textPos.x - 30,              textPos.y + fontSize/2.0f - 10 },
+                            (Vector2){ textPos.x - 30,              textPos.y + fontSize/2.0f + 10 },
+                            RED
+                        );
+                    }
                 }
             }
             
             else if (currentScreen == SCREEN_SLOT_SELECT) {
-                DrawText(isSavingMode ? "SALVAR JOGO" : "CARREGAR JOGO", 250, 50, 30, WHITE);
+                // Fundo 
+                Rectangle src = { 0, 0, (float)texMenuBg.width, (float)texMenuBg.height };
+                Rectangle dst = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
+                DrawTexturePro(texMenuBg, src, dst, (Vector2){ 0, 0 }, 0.0f, WHITE);
+
+                // título 
+                const char *title = isSavingMode ? "SALVAR JOGO" : "CARREGAR JOGO";
+                float titleSize = 32.0f;
+                float titleSpacing = 2.0f;
+                Vector2 tSize = MeasureTextEx(fontMenu, title, titleSize, titleSpacing);
+                DrawTextEx(fontMenu, title,
+                        (Vector2){ (GetScreenWidth() - tSize.x)/2, 40 },
+                        titleSize, titleSpacing, WHITE);
+
+                // Slots
                 for (int i = 0; i < 3; i++) {
-                    int posX = 100 + i * 200; 
-                    Rectangle slotRect = {posX, 150, 150, 120};
-                    
+                    int posX = 120 + i * 220;  
+                    Rectangle slotRect = (Rectangle){ posX,  150, 180, 130 };
+
                     bool exists = SaveExists(i);
-                    SaveData data = {0};
+                    SaveData data = (SaveData){0};
                     if (exists) data = LoadGameData(i);
 
-                    if (i == saveSlotSelection) {
-                        DrawRectangleRec(slotRect, RED); 
-                    } else DrawRectangleRec(slotRect, DARKGRAY);
-                    
-                    DrawText(TextFormat("SLOT %d", i+1), posX + 40, 160, 20, WHITE);
+                    bool selected = (i == saveSlotSelection);
+                    Color bg     = selected ? (Color){ 200, 50, 50, 180 } : (Color){ 0, 0, 0, 160 };
+                    Color border = selected ? YELLOW : GRAY;
+
+                    DrawRectangleRec(slotRect, bg);
+                    DrawRectangleLinesEx(slotRect, 2.0f, border);
+
+                    // "SLOT X"
+                    DrawTextEx(fontMenu, TextFormat("SLOT %d", i + 1),
+                            (Vector2){ slotRect.x + 10, slotRect.y + 10 },
+                            20.0f, 2.0f, WHITE);
+
                     if (exists) {
-                        DrawText(data.saveName, posX + 10, 190, 10, WHITE);
-                        DrawText(data.dateBuffer, posX + 10, 210, 10, LIGHTGRAY);
-                        DrawText(TextFormat("Pts: %d", data.score), posX + 10, 230, 10, YELLOW);
-                    } else DrawText("VAZIO", posX + 50, 210, 20, GRAY);
+                        DrawTextEx(fontMenu, data.saveName,
+                                (Vector2){ slotRect.x + 10, slotRect.y + 40 },
+                                16.0f, 1.0f, WHITE);
+                        DrawTextEx(fontMenu, data.dateBuffer,
+                                (Vector2){ slotRect.x + 10, slotRect.y + 60 },
+                                11.0f, 1.0f, LIGHTGRAY);
+                        DrawTextEx(fontMenu, TextFormat("Pts: %d", data.score),
+                                (Vector2){ slotRect.x + 10, slotRect.y + 80 },
+                                11.0f, 1.0f, YELLOW);
+                    } else {
+                        DrawTextEx(fontMenu, "VAZIO",
+                                (Vector2){ slotRect.x + 40, slotRect.y + 55 },
+                                20.0f, 2.0f, GRAY);
+                    }
                 }
             }
 
+
             else if (currentScreen == SCREEN_NAME_INPUT) {
-                DrawText("DIGITE O NOME DO SAVE", 220, 100, 30, WHITE);
+                DrawTextEx(fontMenu, "DIGITE O NOME DO SAVE",
+                (Vector2){ 100, 100 },
+                30.0f, 2.0f, WHITE);
                 
-                // Caixa de texto
                 DrawRectangle(250, 200, 300, 50, DARKGRAY);
                 DrawRectangleLines(250, 200, 300, 50, WHITE);
                 
                 DrawText(tempName, 260, 210, 30, YELLOW);
                 
-                // Cursor piscante
                 framesCounter++;
                 if ((framesCounter/30)%2 == 0) {
                     DrawText("_", 260 + MeasureText(tempName, 30), 210, 30, YELLOW);
                 }
                 
-                DrawText("ENTER para confirmar", 300, 300, 20, GRAY);
+                DrawTextEx(fontMenu, "ENTER para confirmar",
+                (Vector2){ 220, 300 },
+                20.0f, 2.0f, GRAY);
             }
 
+            else if (currentScreen == SCREEN_STORY) {
+                // Fundo de historia
+                Rectangle src = { 0, 0, (float)texStoryBg.width, (float)texStoryBg.height };
+                Rectangle dst = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
+                DrawTexturePro(texStoryBg, src, dst, (Vector2){ 0, 0 }, 0.0f, WHITE);
+
+                // Caixa de texto
+                Rectangle box = { 40, 300, 720, 140 };
+                DrawRectangleRec(box, (Color){ 0, 0, 0, 180 });
+                DrawRectangleLinesEx(box, 2.0f, DARKGRAY);
+
+                // Pega só os caracteres já "revelados"
+                const char *full = storyLines[storyCurrentLine];
+                int len = (int)strlen(full);
+                if (storyCharIndex > len) storyCharIndex = len;
+
+                char buffer[512];
+                if (storyCharIndex > 0) {
+                    memcpy(buffer, full, storyCharIndex);
+                }
+                buffer[storyCharIndex] = '\0';
+
+                DrawTextEx(fontMenu, buffer,
+                        (Vector2){ box.x + 20, box.y + 20 },
+                        20.0f, 2.0f, WHITE);
+
+                DrawTextEx(fontMenu,
+                        storyLineFinished ? "ENTER OU ESPACO para continuar" : "ENTER/ESPACO para acelerar",
+                        (Vector2){ box.x + 20, box.y + box.height - 30 },
+                        12.0f, 1.0f, YELLOW);
+            }
+
+
             else if (currentScreen == SCREEN_CONFIRM_OVERWRITE) {
-                DrawText("ATENCAO!", 320, 100, 40, RED);
-                if (isSavingMode) DrawText("Deseja SOBRESCREVER este save?", 220, 200, 20, WHITE);
-                else DrawText("Deseja CARREGAR este save?", 250, 200, 20, WHITE);
+                DrawTextEx(fontMenu, "ATENCAO!",(Vector2){300, 100 }, 24.0f, 2.0f, RED);
+                if (isSavingMode) DrawTextEx(fontMenu,"Deseja SOBRESCREVER este save?",
+                (Vector2){ 150, 200 }, 20.0f, 2.0f, WHITE);
+                else DrawTextEx(fontMenu,"Deseja CARREGAR este save?", 
+                (Vector2){ 150, 250 }, 20.0f, 2.0f, WHITE);
                 
-                DrawText("[S] SIM    [N] NAO", 300, 300, 20, YELLOW);
+                DrawTextEx(fontMenu,"[S] SIM    [N] NAO", (Vector2){ 250, 300 }, 16.0f, 2.0f, YELLOW);
             }
 
             else if (currentScreen == SCREEN_MSG_EMPTY) {
-                DrawText("SLOT VAZIO!", 300, 200, 30, RED);
-                DrawText("Pressione ENTER", 320, 250, 20, GRAY);
+                DrawTextEx(fontMenu, "SLOT VAZIO!",(Vector2){ 200, 200 }, 30.0f, 2.0f, RED);
+                DrawTextEx(fontMenu,"Pressione ENTER",(Vector2){ 220, 250 }, 20.0f, 2.0f, GRAY);
             }
             
             else if (currentScreen == SCREEN_PAUSE) {
                 DrawRectangle(0,0,screenWidth, screenHeight, (Color){0,0,0,200});
-                DrawText("PAUSA", 350, 50, 40, WHITE);
-                const char* pOptions[] = {"VOLTAR", "SALVAR JOGO", "CARREGAR JOGO", "SAIR P/ MENU"};
+                DrawTextEx(fontMenu,"PAUSA", (Vector2){ 300, 50 }, 40.0f, 2.0f, WHITE);
+                const char* pOptions[] = {"VOLTAR", "SALVAR JOGO", "CARREGAR JOGO", "SAIR PARA MENU"};
                 for (int i = 0; i < 4; i++) {
                     Color c = (i == pausemenu) ? YELLOW : GRAY;
-                    DrawText(pOptions[i], 300, 150 + i*50, 20, c);
+                    DrawTextEx(fontMenu, pOptions[i],
+                    (Vector2){ 300, 150 + i*50 },
+                    20.0f, 2.0f, c);
                     if (i == pausemenu) DrawText(">", 280, 150 + i*50, 20, RED);
                 }
             }
             else if (currentScreen == SCREEN_NUM_PLAYERS) {
-                int opt1X = 250; int opt2X = 500; int optY = 200;  
-                DrawText("QUANTOS JOGADORES?", 250, 100, 30, WHITE);
-                DrawText("1 JOGADOR", opt1X, optY, 30, (numPlayers == 1) ? YELLOW : GRAY);
-                DrawText("2 JOGADORES", opt2X, optY, 30, (numPlayers == 2) ? YELLOW : GRAY);
+                int opt1X = 120; int opt2X = 460; int optY = 200;  
+                DrawTextEx(fontMenu, "QUANTOS PLAYERS?", 
+                (Vector2){ 170, 100 }, 30.0f, 2.0f,WHITE);
+                DrawTextEx(fontMenu, "1 PLAYER",
+                (Vector2){ opt1X, optY },
+                30.0f, 2.0f,
+                (numPlayers == 1) ? YELLOW : GRAY);
+
+                DrawTextEx(fontMenu, "2 PLAYERS",
+                (Vector2){ opt2X, optY },
+                30.0f, 2.0f,
+                (numPlayers == 2) ? YELLOW : GRAY);
                 int arrowX = (numPlayers == 1) ? opt1X : opt2X;
                 DrawTriangle((Vector2){arrowX - 20, optY + 15}, (Vector2){arrowX - 35, optY}, (Vector2){arrowX - 35, optY + 30}, RED);
             }
             else if (currentScreen == SCREEN_CLASS_SELECT) {
-                DrawText("SELECAO DE CLASSE", 280, 50, 30, WHITE);
-                DrawText("P1", 150, 150, 30, BLUE);
-                DrawText(p1.playerclass == CLASS_MAGO ? "MAGO" : "GUERREIRO", 150, 200, 20, YELLOW);
-                if (p1.ready) DrawText("OK", 150, 250, 20, GREEN);
+                DrawTextEx(fontMenu, "SELECAO DE CLASSE",
+                (Vector2){ 140, 50 },
+                30.0f, 2.0f, WHITE);
+                DrawTextEx(fontMenu, "P1",
+                (Vector2){ 150, 150 },
+                30.0f, 2.0f, BLUE);
+                DrawTextEx(fontMenu,
+                p1.playerclass == CLASS_MAGO ? "MAGO" : "GUERREIRO",
+                (Vector2){ 150, 200 },
+                20.0f, 2.0f, YELLOW);
+                if (p1.ready) {
+                    DrawTextEx(fontMenu, "OK",
+                    (Vector2){ 150, 250 },
+                    20.0f, 2.0f, GREEN);
+                }
+
                 if (numPlayers == 2) {
-                    DrawText("P2", 550, 150, 30, GREEN);
-                    DrawText(p2.playerclass == CLASS_MAGO ? "MAGO" : "GUERREIRO", 550, 200, 20, YELLOW);
-                    if (p2.ready) DrawText("OK", 550, 250, 20, GREEN);
+                    DrawTextEx(fontMenu, "P2",
+                    (Vector2){ 550, 150 },
+                    30.0f, 2.0f, GREEN);
+
+                    DrawTextEx(fontMenu,
+                    p2.playerclass == CLASS_MAGO ? "MAGO" : "GUERREIRO",
+                    (Vector2){ 550, 200 },
+                    20.0f, 2.0f, YELLOW);
+
+                    if (p2.ready) {
+                    DrawTextEx(fontMenu, "OK",
+                    (Vector2){ 550, 250 },
+                    20.0f, 2.0f, GREEN);
+                    }
                 }
             }
-            else if (currentScreen == SCREEN_GAMEPLAY) 
-            {
+            else if (currentScreen == SCREEN_GAMEPLAY) {
                 // ---------- ÁREA DO MUNDO (com câmera) ----------
                 BeginMode2D(camera);
 
@@ -703,17 +934,43 @@ int main(void)
             // --- Draw GAME OVER  ---
             else if (currentScreen == SCREEN_GAMEOVER) {
                 DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0, 0, 0, 200}); 
-                DrawText("GAME OVER", 280, 150, 50, RED);
-                DrawText(TextFormat("SCORE FINAL: %d", p1.score + p2.score), 300, 250, 30, YELLOW);
-                DrawText("APERTE ESC PARA VOLTAR", 280, 350, 20, GRAY);
+                DrawTextEx(fontMenu, "GAME OVER",
+                (Vector2){ 180, 150 },
+                50.0f, 2.0f, RED);
+
+                DrawTextEx(fontMenu,
+                TextFormat("SCORE FINAL: %d", p1.score + p2.score),
+                (Vector2){ 200, 250 },
+                30.0f, 2.0f, YELLOW);
+
+                DrawTextEx(fontMenu, "APERTE ESC PARA VOLTAR",
+                (Vector2){ 180, 350 },
+                20.0f, 2.0f, GRAY);
+
             }
             
             else if (currentScreen == SCREEN_OPTIONS) DrawText("OPCOES", 350, 200, 20, WHITE);
-            else if (currentScreen == SCREEN_CREDITS) DrawText("CREDITOS", 350, 200, 20, WHITE);
+            else if (currentScreen == SCREEN_CREDITS) {
+                DrawTextEx(fontMenu,
+                "AFINAL, VOCE CONSEGUIU O QUE ALMEJAVA\nMAS ISSO PODE TER CUSTADO\nMAIS DO QUE VOCE IMAGINAVA...",
+                (Vector2){ 80, 200 },
+                16.0f,                   
+                2.0f,                    
+                WHITE);    
+                DrawTextEx(fontMenu,
+                "FIM.",
+                (Vector2){ 350, 300 },
+                16.0f,                   
+                2.0f,                    
+                RED);               
+            }
 
         EndDrawing();
     }
 
+    UnloadTexture(texMenuBg);
+    UnloadTexture(texMenuLogo);
+    UnloadTexture(texStoryBg); 
     UnloadMonsters();
     UnloadProjectiles();
     CloseWindow(); 

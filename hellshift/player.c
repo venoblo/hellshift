@@ -453,11 +453,6 @@ void DrawPlayer(Player p) {
         DrawText(stateName, p.position.x, p.position.y - 50, 10, YELLOW);
     }
 
-    if (textureFailed) {
-        DrawRectangle(p.position.x - 20, p.position.y - 20, 40, 40, MAGENTA);
-        DrawText("NO PNG", p.position.x - 30, p.position.y - 40, 10, RED);
-        return;
-    }
 
     int realMaxFrames = GetPlayerMaxFrames(p);
     float frameWidth = (float)texToDraw.width / realMaxFrames;
@@ -497,9 +492,12 @@ void DrawPlayer(Player p) {
 
     DrawTexturePro(texToDraw, sourceRec, destRec, origin, 0.0f, drawColor);
 
+
+    /* debugs dos jogadores
     DrawText(TextFormat("State: %s", stateName), p.position.x - 20, p.position.y - 60, 10, YELLOW);
     DrawText(TextFormat("Frame: %d/%d", frameToDraw, maxFrames), p.position.x - 20, p.position.y - 50, 10, YELLOW);
     DrawText(TextFormat("Life: %d", p.life), p.position.x - 20, p.position.y - 40, 10, GREEN);
-
+    hitbox
     DrawCircleLines(p.position.x, p.position.y, 12, GREEN);
+    */
 }
