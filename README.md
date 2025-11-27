@@ -1,5 +1,7 @@
 Bem vindo a Hellshift
 
+Video do jogo sendo executado: 
+
 A sequir estão instruções sobre implementação e uso so sistema para poder executar o jogo:
 
 (Para Windows)======================================================
@@ -17,7 +19,8 @@ A sequir estão instruções sobre implementação e uso so sistema para poder e
      - Esse passo só precisa ser feito uma vez
   
   3) Compile e rode o jogo:
-       - No terminal MSYS2 MinGW64 acesse a pasta do jogo usando o comando cd (Ex: cd /c/Users/SEU_USUARIO/Área\ de\ Trabalho/hellshift)
+       - No terminal MSYS2 MinGW64 acesse a pasta do jogo usando o comando cd (Ex: cd /c/Users/SEU_USUARIO/Área\ de\ Trabalho/hellshift/hellshift)
+       - (Importante, dentro do repertorio github existe uma pasta também nomeada hellshift que contem os arquivos main.c, é essa a pasta que deve ser acessada)
        - Em seguida compile o jogo usando o comando: make
        - Por fim execute o jogo com o comando: ./hellshift.exe
        - Isso vai abrir uma janela aonde você terá acesso ao jogo
