@@ -1,6 +1,6 @@
 #include "projectile.h"
 #include "map.h"
-#include <stdlib.h> // Para malloc/free
+#include <stdlib.h>
 #include "monster.h" 
 #include "player.h"
 #include <math.h>
@@ -32,7 +32,7 @@ static void UnloadFireballOnce(void) {
 // A lista de projéteis
 static ProjectileNode *listaDeProjeteis = NULL;
 
-// Função privada para desenhar UM projétil
+// Função privada para desenhar 1 projétil
 static void DrawOneProjectile(Projectile p) {
     if (!fireballLoaded || fireballTex.id <= 0) {
         DrawCircleV(p.position, p.radius, p.color);
@@ -58,13 +58,13 @@ static void DrawOneProjectile(Projectile p) {
     Vector2 origin = { destRec.width/2.0f, destRec.height/2.0f };
 
     // rotaciona conforme direção do tiro
-    float angle = atan2f(p.direction.y, p.direction.x) * 57.2957795f; // RAD->DEG
+    float angle = atan2f(p.direction.y, p.direction.x) * 57.2957795f;
 
     DrawTexturePro(fireballTex, sourceRec, destRec, origin, angle, WHITE);
 }
 
 
-// Função privada para atualizar um projétil
+// Função privada para atualizar 1 projétil
 static void UpdateOneProjectile(Projectile *p) {
     p->position.x += p->direction.x * p->speed;
     p->position.y += p->direction.y * p->speed;
@@ -85,7 +85,6 @@ void SpawnProjectile(Vector2 position, Vector2 direction) {
     ProjectileNode *novo = (ProjectileNode *)malloc(sizeof(ProjectileNode));
     if (novo == NULL) return;
 
-    // normaliza direção
     if (direction.x == 0 && direction.y == 0) direction = (Vector2){0, -1};
     direction = Vector2Normalize(direction);
 
@@ -113,7 +112,7 @@ void UpdateProjectiles(Map *map, Player *p) {
         
         ProjectileNode *nextNode = current->next; 
 
-        // colisão com o MAPA
+        // colisão com o mapa
         float r = current->data.radius;
         Vector2 pos = current->data.position;
 
@@ -124,7 +123,7 @@ void UpdateProjectiles(Map *map, Player *p) {
             CheckMapCollision(*map, (Vector2){ pos.x, pos.y + r }) ||
             CheckMapCollision(*map, (Vector2){ pos.x, pos.y - r });
 
-        // 2. Prepara Hitbox do Projétil
+        // Prepara Hitbox do Projétil
         Rectangle projRect = {
             .x = current->data.position.x - current->data.radius,
             .y = current->data.position.y - current->data.radius,
@@ -135,16 +134,12 @@ void UpdateProjectiles(Map *map, Player *p) {
         
         int pontosGanhos = CheckMonsterCollision(projRect);
         
-        // Se matou monstro, soma pontos no Player (Isso resolve o erro "unused p")
         if (pontosGanhos > 0) {
              p->score += pontosGanhos; 
         }
         
-        // verifica se deve destruir o projétil
-        // se bateu no mapa OU ganhou pontos (acertou monstro)
         if (colidiuComMapa || pontosGanhos > 0) {
             
-            // Lógica de remoção da lista
             if (prev == NULL) {
                 listaDeProjeteis = nextNode;
             } else {
@@ -154,11 +149,9 @@ void UpdateProjectiles(Map *map, Player *p) {
             free(current); 
             
         } else {
-            // Se não colidiu, avança o prev
             prev = current;
         }
 
-        // Avança para o próximo nó
         current = nextNode;
     }
 

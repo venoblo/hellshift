@@ -76,7 +76,7 @@ void PerformSave(int slot) {
     // SALVA SE O LEVEL JÁ COMEÇOU (Para não spawnar monstros default em cima dos salvos)
     data.level1Started = level1Started;
 
-    // --- SALVA OS MONSTROS ---
+    // SALVA OS MONSTROS
     ExportMonsters(&data);
     
     SaveGame(slot, data);
@@ -103,13 +103,13 @@ void ApplyLoadedGame(SaveData data) {
     p1.life = data.p1Life;
     if (numPlayers == 2) p2.life = data.p2Life;
 
-    // --- CARREGA OS MONSTROS ---
+    // CARREGA OS MONSTROS
     ImportMonsters(data);
     
-    // Recupera o estado do nível (para o main não spawnar monstros novos)
+    // evita spaw de monstros novos
     level1Started = data.level1Started; 
 
-    p1.position = (Vector2){350, 225}; // Ou você poderia salvar a posição exata na struct SaveData!
+    p1.position = (Vector2){350, 225};
     p2.position = (Vector2){450, 225};
 }
 
@@ -180,14 +180,12 @@ int main(void)
                     if (exists) {
                         currentScreen = SCREEN_CONFIRM_OVERWRITE;
                     } else {
-                        // Se veio do Pause e slot vazio -> Salva Direto (Mantém nome atual ou padrão)
                         if (isPauseMenu) {
                              PerformSave(saveSlotSelection);
                              currentScreen = SCREEN_GAMEPLAY;
                         } else {
-                            // Novo Jogo -> Vai digitar nome
                             letterCount = 0;
-                            tempName[0] = '\0'; // Limpa nome
+                            tempName[0] = '\0';
                             currentScreen = SCREEN_NAME_INPUT; 
                         }
                     }
@@ -195,8 +193,7 @@ int main(void)
                     // --- MODO CARREGAR ---
                     if (exists) {
                         if (isPauseMenu) {
-                            // Se estiver no pause, pergunta se quer carregar (perder progresso atual)
-                            currentScreen = SCREEN_CONFIRM_OVERWRITE; // Reutilizando tela de confirm
+                            currentScreen = SCREEN_CONFIRM_OVERWRITE;
                         } else {
                             SaveData data = LoadGameData(saveSlotSelection);
                             ApplyLoadedGame(data);
@@ -229,31 +226,26 @@ int main(void)
 
             // Confirmar Nome
             if (IsKeyPressed(KEY_ENTER)) {
-                // Inicia fluxo de criação de personagem
+                
                 ResetPlayers();
-                // Salva o arquivo inicial com o nome escolhido
+                
                 PerformSave(saveSlotSelection); 
                 currentScreen = SCREEN_NUM_PLAYERS;
             }
         }
 
         
-        // --- CONFIRMA SOBRESCRITA ---
         else if (currentScreen == SCREEN_CONFIRM_OVERWRITE) {
-            if (IsKeyPressed(KEY_S)) { // SIM
+            if (IsKeyPressed(KEY_S)) {
                 if (isSavingMode) {
-                    // Sobrescrever Save
                     if (isPauseMenu) {
-                        // Pause: Salva estado atual
                         PerformSave(saveSlotSelection); 
                         currentScreen = SCREEN_GAMEPLAY;
                     } else {
-                        // Novo Jogo: Vai para Input de Nome
                         letterCount = 0; tempName[0] = '\0';
                         currentScreen = SCREEN_NAME_INPUT;
                     }
                 } else {
-                    // Carregar (Vindo do Pause)
                     SaveData data = LoadGameData(saveSlotSelection);
                     ApplyLoadedGame(data);
                     currentScreen = SCREEN_GAMEPLAY;
@@ -354,9 +346,8 @@ int main(void)
         }
 
         else if (currentScreen == SCREEN_GAMEPLAY) {
-            // ESC -> VOLTAR
             if (IsKeyPressed(KEY_ESCAPE)) {
-                currentScreen = SCREEN_PAUSE; // <-- AGORA VAI PARA PAUSE
+                currentScreen = SCREEN_PAUSE;
             }
 
             // Spawn Inicial
@@ -370,23 +361,20 @@ int main(void)
 
             // --- LÓGICA DE VIDA E FANTASMA ---
             
-            // 1 PLAYER: Morte = Game Over Direto
             // PLAYER 1
             if (p1.life <= 0 && !p1.ghost && !p1.isPossessing) {
-                // Se ainda não começou a morrer, começa agora
                 if (p1.state != PLAYER_DEATH && p1.state != PLAYER_REBIRTH && p1.state != PLAYER_GHOST) {
                     p1.state = PLAYER_DEATH;
                     p1.currentFrame = 0;
                     p1.frameTime = 0.0f;
                 }
-                // Se por algum motivo bugou e ficou IDLE com vida 0, força DEATH de novo
                 else if (p1.state == PLAYER_IDLE || p1.state == PLAYER_WALK) {
                      p1.state = PLAYER_DEATH;
                      p1.currentFrame = 0;
                 }
             }
 
-            // PLAYER 2 (Se existir)
+            // PLAYER 2
             if (numPlayers == 2 && p2.life <= 0 && !p2.ghost && !p2.isPossessing) {
                 if (p2.state != PLAYER_DEATH && p2.state != PLAYER_REBIRTH && p2.state != PLAYER_GHOST) {
                     p2.state = PLAYER_DEATH;
@@ -400,10 +388,10 @@ int main(void)
             }
 
 
-            // --- 2. CHECAGEM DE GAME OVER ---
+            // --- CHECAGEM DE GAME OVER ---
             bool gameOver = false;
 
-            bool p1Out = (p1.ghost || p1.isPossessing);  // isPossessing só acontece quando já era fantasma
+            bool p1Out = (p1.ghost || p1.isPossessing);
             bool p2Out = (p2.ghost || p2.isPossessing);
 
             if (numPlayers == 1) {
@@ -452,10 +440,10 @@ int main(void)
             CheckRoomTransition(&mapa, &p1, &p2, numPlayers);
 
             // --- DANOS E COLISÕES ---
-            if (currentScreen == SCREEN_GAMEPLAY) { // Só processa se ainda estiver no jogo
+            if (currentScreen == SCREEN_GAMEPLAY) {
                 
 
-                // -------- DANO MANUAL DO POSSUÍDO (sem IA) --------
+                // -------- DANO MANUAL DO POSSUÍDO --------
                 if (numPlayers == 2) {
 
                     // P1 possuindo ataca P2
@@ -466,7 +454,6 @@ int main(void)
                             Vector2 monsterCenter = { m->data.position.x + 15, m->data.position.y + 15 };
                             float dist = Vector2Distance(monsterCenter, p2.position);
 
-                            // mesmo critério do CheckPlayerHit: playerRadius(40) + monsterRadius(15)
                             if (dist < (40.0f + 15.0f)) {
                                 p2.life -= m->data.damage;
                                 p2.damageCooldown = 0.6f; 
@@ -530,13 +517,11 @@ int main(void)
                     if (p1.ghost && p1.trapActive && !p2.ghost && Vector2Distance(p1.position, p2.position) < 100.0f) {
                         p2.life -= 80; 
                         p2.damageCooldown = 1.0f;
-                        // Gatilho Hurt P2 (Opcional, já que 80 de dano quase mata)
                         if (p2.playerclass == CLASS_GUERREIRO) { p2.state = PLAYER_HURT; p2.currentFrame = 0; p2.frameTime = 0.0f; }
                     }
                     if (p2.ghost && p2.trapActive && !p1.ghost && Vector2Distance(p2.position, p1.position) < 100.0f) {
                         p1.life -= 80; 
                         p1.damageCooldown = 1.0f;
-                        // Gatilho Hurt P1
                         if (p1.playerclass == CLASS_GUERREIRO) { p1.state = PLAYER_HURT; p1.currentFrame = 0; p1.frameTime = 0.0f; }
                     }
                 }
@@ -563,7 +548,7 @@ int main(void)
         
         else if (currentScreen == SCREEN_GAMEOVER) {
             if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) {
-                // RESET TOTAL
+                // Reset total
                 level1Started = false;
                 p1.ready = false; p2.ready = false;
                 UnloadMonsters(); 
@@ -609,7 +594,7 @@ int main(void)
                     
                     DrawText(TextFormat("SLOT %d", i+1), posX + 40, 160, 20, WHITE);
                     if (exists) {
-                        DrawText(data.saveName, posX + 10, 190, 10, WHITE); // Nome do Save
+                        DrawText(data.saveName, posX + 10, 190, 10, WHITE);
                         DrawText(data.dateBuffer, posX + 10, 210, 10, LIGHTGRAY);
                         DrawText(TextFormat("Pts: %d", data.score), posX + 10, 230, 10, YELLOW);
                     } else DrawText("VAZIO", posX + 50, 210, 20, GRAY);
@@ -619,13 +604,13 @@ int main(void)
             else if (currentScreen == SCREEN_NAME_INPUT) {
                 DrawText("DIGITE O NOME DO SAVE", 220, 100, 30, WHITE);
                 
-                // Caixa de Texto
+                // Caixa de texto
                 DrawRectangle(250, 200, 300, 50, DARKGRAY);
                 DrawRectangleLines(250, 200, 300, 50, WHITE);
                 
                 DrawText(tempName, 260, 210, 30, YELLOW);
                 
-                // Cursor Piscante
+                // Cursor piscante
                 framesCounter++;
                 if ((framesCounter/30)%2 == 0) {
                     DrawText("_", 260 + MeasureText(tempName, 30), 210, 30, YELLOW);
@@ -715,7 +700,7 @@ int main(void)
                 }
             }
             
-            // --- DESENHO GAME OVER  ---
+            // --- Draw GAME OVER  ---
             else if (currentScreen == SCREEN_GAMEOVER) {
                 DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0, 0, 0, 200}); 
                 DrawText("GAME OVER", 280, 150, 50, RED);

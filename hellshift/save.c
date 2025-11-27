@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <time.h> 
 
+//dá nome aos arquivos de saves
 void GetSaveFileName(int slot, char *buffer) {
-    // Gera nomes como: save_slot_0.dat, save_slot_1.dat
     sprintf(buffer, "save_slot_%d.dat", slot);
 }
 
@@ -14,7 +14,6 @@ void SaveGame(int slot, SaveData data) {
     // pega a hora do sistema 
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
-    // formata como: "21/11/2024 15:30"
     sprintf(data.dateBuffer, "%02d/%02d/%d %02d:%02d", 
             tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900, 
             tm.tm_hour, tm.tm_min);
