@@ -32,7 +32,22 @@ A sequir estão instruções sobre implementação e uso so sistema para poder e
        - Isso vai abrir uma janela aonde você terá acesso ao jogo
     
 (Para Mac)======================================================
+1) Ter estes pré-requisitos:
+
+    - macOS com Xcode Command Line Tools instaladas
+
+    - Homebrew instalado
+    - raylib instalado via Homebrew
+  
+2)  Baixe o repositorio GitHub:
+     - Baixe ou clone o repositório codigo do git em forma de arquivo ZIP e em seguida o abra em algum lugar da sua maquina (Ex: Área de Trabalho)
+  
+3) Compile e rode o jogo:
+   - No terminal, conferir se está na pasta correta usando "cd hellshift"
+   - Executar make clean
+   - Executar make run
+   - Abrirá uma janela com o jogo
+   - Tentar zerar o jogo!
 
 
-
-(Para Linux)======================================================
+(Para Linux/WSL)======================================================
