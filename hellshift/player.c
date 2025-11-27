@@ -53,8 +53,8 @@ void InitPlayerClassStats(Player *p) {
     // Lógica SWITCH/CASE para aplicar as estatísticas
     if (p->playerclass == CLASS_GUERREIRO) {
         // Stats do Guerreiro (Tanque)
-        p->maxLife = 800;
-        p->life = 800;
+        p->maxLife = 200;
+        p->life = 200;
         p->speed = 2.0f; // Mais lento
 
         p->texIdle    = LoadTexture("resources/characters/warriorp1/Knight-Idle.png");
@@ -66,8 +66,8 @@ void InitPlayerClassStats(Player *p) {
     } 
     else if (p->playerclass == CLASS_MAGO) {
         // Stats do Mago
-        p->maxLife = 500;
-        p->life = 500;
+        p->maxLife = 160;
+        p->life = 160;
         p->speed = 2.5f; 
         
         // --- CARREGAMENTO DAS SPRITES DO MAGO  ---
@@ -474,11 +474,6 @@ void DrawPlayer(Player p) {
         DrawText(stateName, p.position.x, p.position.y - 50, 10, YELLOW);
     }
 
-    if (textureFailed) {
-        DrawRectangle(p.position.x - 20, p.position.y - 20, 40, 40, MAGENTA);
-        DrawText("NO PNG", p.position.x - 30, p.position.y - 40, 10, RED);
-        return;
-    }
 
     int realMaxFrames = GetPlayerMaxFrames(p);
     float frameWidth = (float)texToDraw.width / realMaxFrames;
@@ -519,10 +514,12 @@ void DrawPlayer(Player p) {
     // DESENHO FINAL
     DrawTexturePro(texToDraw, sourceRec, destRec, origin, 0.0f, drawColor);
 
+
+    /* debugs dos jogadores
     DrawText(TextFormat("State: %s", stateName), p.position.x - 20, p.position.y - 60, 10, YELLOW);
     DrawText(TextFormat("Frame: %d/%d", frameToDraw, maxFrames), p.position.x - 20, p.position.y - 50, 10, YELLOW);
     DrawText(TextFormat("Life: %d", p.life), p.position.x - 20, p.position.y - 40, 10, GREEN);
-
-    // DEBUG: Descomente abaixo para ver se a colisão bate com o desenho
+    hitbox
     DrawCircleLines(p.position.x, p.position.y, 12, GREEN);
+    */
 }

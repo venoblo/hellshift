@@ -383,8 +383,23 @@ static void SpawnRoomEnemies(Map *map) {
     int enemyCount = 2 + GetRandomValue(0, d->floorLevel);
 
     for (int i = 0; i < enemyCount; i++) {
-        float px = GetRandomValue(80, 700);
-        float py = GetRandomValue(80, 400);
+        
+        int tileX, tileY;
+
+        int tries = 0;
+        do {
+            tileX = GetRandomValue(1, MAP_WIDTH  - 2);
+            tileY = GetRandomValue(1, MAP_HEIGHT - 2);
+            tries++;
+        } while (
+            (r->tiles[tileY][tileX] != TILE_EMPTY) &&   // só aceita chão
+            tries < 50
+        );
+
+        // converte tile -> coordenada do mundo
+        // posição no centro do tile, ajustando pelo tamanho do monstro (30x30)
+        float px = MAP_OFFSET_X + tileX * TILE_SIZE + TILE_SIZE/2.0f - 15.0f;
+        float py = MAP_OFFSET_Y + tileY * TILE_SIZE + TILE_SIZE/2.0f - 15.0f;
 
         // 1º andar: só esqueleto
         // 2º andar: esqueleto e slime
