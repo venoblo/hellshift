@@ -45,7 +45,6 @@ static const float skAttackAnimSpeed[SKEL_VARIANT_COUNT] = {
 
 
 static const int skMaxFrames[SKEL_VARIANT_COUNT][5] = {
-    // SKEL_NORMAL
     [SKEL_NORMAL] = {
         6,  // IDLE
         8,  // WALK
@@ -53,7 +52,6 @@ static const int skMaxFrames[SKEL_VARIANT_COUNT][5] = {
         4,  // HURT
         4   // DEATH
     },
-    // SKEL_ARMORED
     [SKEL_ARMORED] = {
         6,  // IDLE
         8,  // WALK
@@ -61,7 +59,6 @@ static const int skMaxFrames[SKEL_VARIANT_COUNT][5] = {
         4,  // HURT
         4   // DEATH
     },
-    // SKEL_GREATSWORD
     [SKEL_GREATSWORD] = {
         6,  // IDLE
         9,  // WALK
@@ -71,7 +68,7 @@ static const int skMaxFrames[SKEL_VARIANT_COUNT][5] = {
     }
 };
 
-// ORC FRAMES / SPEEDS / STATS 
+// ORC
 
 // ordem dos estados na tabela: IDLE, WALK, ATTACK, HURT, DEATH
 static const int orcMaxFrames[ORC_VARIANT_COUNT][5] = {
@@ -83,17 +80,17 @@ static const int orcMaxFrames[ORC_VARIANT_COUNT][5] = {
 static const float orcAttackAnimSpeed[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 0.10f,
     [ORC_ARMORED] = 0.10f,
-    [ORC_ELITE]   = 0.14f,  // Elite mais lento
+    [ORC_ELITE]   = 0.14f,
 };
 
 // cooldown só pra elite/rider
 static const float orcAttackCooldown[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 0.0f,
     [ORC_ARMORED] = 0.0f,
-    [ORC_ELITE]   = 0.8f,   // Elite cooldown
+    [ORC_ELITE]   = 0.8f,
 };
 
-// ===== STATS (edite aqui quando quiser) =====
+// ===== STATS =====
 static const int orcLife[ORC_VARIANT_COUNT] = {
     [ORC_NORMAL]  = 65,
     [ORC_ARMORED] = 80,
@@ -119,7 +116,7 @@ static const float orcActiveRange[ORC_VARIANT_COUNT] = {
 };
 
 
-// SLIME FRAMES / SPEEDS / STATS
+// SLIME
 
 static const int slimeMaxFrames[5] = {
     6,  // IDLE
@@ -175,7 +172,6 @@ typedef struct BossStats {
     float attackCooldown;
 } BossStats;
 
-// aqui você edita vida/dano/etc dos bosses
 static const BossStats bossStats[4] = {
     {250, 20, 1.6f, 220.0f, 0.8f},   // Werewolf
     {320, 25, 1.3f, 200.0f, 1.0f},   // Werebear
@@ -210,7 +206,7 @@ float GetSkeletonAttackAnimSpeed(SkeletonVariant v) {
 static void LoadSkeletonTexturesOnce(void) {
     if (skeletonTexturesLoaded) return;
 
-    // NORMAL (já existe)
+    // NORMAL
     skSprites[SKEL_NORMAL].idle   = LoadTexture("resources/monsters/skeleton/Skeleton-Idle.png");
     skSprites[SKEL_NORMAL].walk   = LoadTexture("resources/monsters/skeleton/Skeleton-Walk.png");
     skSprites[SKEL_NORMAL].attack = LoadTexture("resources/monsters/skeleton/Skeleton-Attack.png");
@@ -363,7 +359,6 @@ static void UnloadBossTexturesOnce(void) {
 
 
 int GetMonsterMaxFramesGeneric(Monster *m, MonsterAnimState st) {
-    // ignora TRANSITION para os outros monstros
     if (st < MONSTER_IDLE || st > MONSTER_DEATH)
         st = MONSTER_IDLE;
 
@@ -383,7 +378,7 @@ int GetMonsterMaxFramesGeneric(Monster *m, MonsterAnimState st) {
     int bossIdx = BossTypeToIndex(m->type);
     if (bossIdx >= 0) {
         int col = (int)st;
-        if (st == MONSTER_TRANSITION) col = 5; //  transition
+        if (st == MONSTER_TRANSITION) col = 5;
         if (col < 0 || col > 5) col = 0;
         return bossMaxFrames[bossIdx][col];
     }
@@ -418,7 +413,6 @@ void ExportMonsters(SaveData *data) {
     int count = 0;
     MonsterNode *current = listaDeMonstros;
     
-    // Percorre a lista e copia cada um para o array do SaveData
     while (current != NULL && count < MAX_SAVED_MONSTERS) {
         data->monsters[count].position = current->data.position;
         data->monsters[count].type = (int)current->data.type;
@@ -436,13 +430,11 @@ void ExportMonsters(SaveData *data) {
 }
 
 void ImportMonsters(SaveData data) {
-    UnloadMonsters(); // Limpa monstros existentes
+    UnloadMonsters();
     
-    // Recria a lista a partir do array salvo
     for (int i = 0; i < data.monsterCount; i++) {
         SpawnMonster(data.monsters[i].position, (MonsterType)data.monsters[i].type);
         
-        // Sobrescreve status base pelos salvos
         if (listaDeMonstros != NULL) {
             listaDeMonstros->data.life = data.monsters[i].life;
             listaDeMonstros->data.color = data.monsters[i].color;
@@ -452,7 +444,6 @@ void ImportMonsters(SaveData data) {
         listaDeMonstros->data.skelVariant = (SkeletonVariant)data.monsters[i].skelVariant;
         listaDeMonstros->data.orcVariant  = (OrcVariant)data.monsters[i].orcVariant;
 
-        // re-aponta sprites corretos
         if (listaDeMonstros->data.type == MONSTER_SKELETON) {
             SkeletonVariant v = listaDeMonstros->data.skelVariant;
             if (v < 0 || v >= SKEL_VARIANT_COUNT) v = SKEL_NORMAL;
@@ -482,7 +473,6 @@ void ImportMonsters(SaveData data) {
     }
 }
 
-// Desenho melhorado para identificar quem é quem
 static void DrawOneMonster(Monster m) {
 
     bool hasSprite = (m.texIdle.id != 0);
@@ -505,7 +495,7 @@ static void DrawOneMonster(Monster m) {
         if (m.type == MONSTER_BOSS_DEMON && m.texTransition.id != 0)
             texToDraw = m.texTransition;
         else
-            texToDraw = m.texWalk; // fallback
+            texToDraw = m.texWalk;
         break;
         default: break;
     }
@@ -575,7 +565,6 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
 
     bool isDemon = (m->type == MONSTER_BOSS_DEMON);
 
-    // baixa cooldown sempre
     if (m->attackCooldownTimer > 0) {
         m->attackCooldownTimer -= GetFrameTime();
         if (m->attackCooldownTimer < 0) m->attackCooldownTimer = 0;
@@ -608,7 +597,7 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
         }
     }
 
-    // --- lógica de estado + animação (roda sempre) ---
+    // --- lógica de estado + animação ---
     if (isMeleeAnimated) {
 
         if (finalDir.x < -0.01f) m->facingDirection = -1;
@@ -621,12 +610,10 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
             }
             else if (canMove) {
                 if (isDemon && m->state == MONSTER_IDLE) {
-                    // toca a transition
                     m->state        = MONSTER_TRANSITION;
                     m->currentFrame = 0;
                     m->frameTime    = 0.0f;
                 } else if (m->state != MONSTER_TRANSITION) {
-                    // qualquer outro monster ou demon já transicionado
                     m->state = MONSTER_WALK;
                 }
             }
@@ -660,7 +647,6 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
                 }
                 else if (m->state == MONSTER_ATTACK) {
                     m->currentFrame = 0;
-                    // aplica cooldown quando termina o ataque
                     m->attackCooldownTimer = m->attackCooldown;
                     m->state = MONSTER_IDLE;
                 }
@@ -680,11 +666,10 @@ static void UpdateOneMonster(Monster *m, Vector2 targetPos, Vector2 separationFo
 
 
 static OrcVariant RollOrcVariantWeighted(void) {
-    // Rider mais raro
     int roll = GetRandomValue(0, 99);
-    if (roll < 55) return ORC_NORMAL;      // 55%
-    if (roll < 85) return ORC_ARMORED;     // 30% 
-    return ORC_ELITE; // 15%
+    if (roll < 55) return ORC_NORMAL;
+    if (roll < 85) return ORC_ARMORED;
+    return ORC_ELITE;
 }
 
 void SpawnMonster(Vector2 position, MonsterType type) {
@@ -842,7 +827,6 @@ void UpdateMonsters(Player *p1, Player *p2, int numPlayers, Map *map) {
             continue;
         }
 
-        // --- alvo (igual ao teu código) ---
         Vector2 targetPos = p1->position;
         if (numPlayers == 2) {
             if (p1->ghost && !p2->ghost) targetPos = p2->position;
@@ -853,7 +837,7 @@ void UpdateMonsters(Player *p1, Player *p2, int numPlayers, Map *map) {
             }
         }
 
-        // --- anti-stacking (igual) ---
+        // --- anti-stacking ---
         Vector2 separation = {0};
         MonsterNode *other = listaDeMonstros;
         while (other != NULL) {
@@ -926,7 +910,6 @@ int CheckMonsterCollision(Rectangle rect) {
             || BossTypeToIndex(current->data.type) >= 0
             );
             
-            // se já está morrendo, não toma dano de novo
             if (isAnimatedType && current->data.state == MONSTER_DEATH) {
                 return 0;
             }
@@ -947,7 +930,6 @@ int CheckMonsterCollision(Rectangle rect) {
                 return 100;
             }
 
-            // outros monstros: remove instantâneo
             if (prev == NULL) listaDeMonstros = nextNode;
             else prev->next = nextNode;
             free(current);
@@ -962,7 +944,7 @@ int CheckMonsterCollision(Rectangle rect) {
 }
 
 
-// CHECA SE O JOGADOR FOI ATINGIDO
+// Checa se o jogador foi atingido
 bool CheckPlayerHit(Vector2 playerPosition, float playerRadius) {
     MonsterNode *current = listaDeMonstros;
     
@@ -974,11 +956,10 @@ bool CheckPlayerHit(Vector2 playerPosition, float playerRadius) {
         }
 
         if (current->data.type == MONSTER_SKELETON &&
-            current->data.state == MONSTER_DEATH) { // opcional mas bom
+            current->data.state == MONSTER_DEATH) {
             current = current->next;
             continue;
         }
-        // O monstro tem 30x30. O centro dele é +15,+15.
         Vector2 monsterCenter = { 
             current->data.position.x + 15, 
             current->data.position.y + 15 
@@ -1012,7 +993,6 @@ int CheckMeleeAttack(Vector2 playerPos, float range, int damage) {
         // Calcula a distância entre o monstro e o jogador
         float dist = Vector2Distance(current->data.position, playerPos);
         
-        // Se a distância for menor que o alcance (ex: 60px)
         if (dist <= range) {
             bool isAnimatedType =
             (current->data.type == MONSTER_SKELETON
@@ -1023,7 +1003,6 @@ int CheckMeleeAttack(Vector2 playerPos, float range, int damage) {
             || current->data.type == MONSTER_SLIME
             || BossTypeToIndex(current->data.type) >= 0
             );
-            // se já está morrendo, ignora
             if (isAnimatedType && current->data.state == MONSTER_DEATH) {
                 prev = current;
                 current = nextNode;
@@ -1050,7 +1029,6 @@ int CheckMeleeAttack(Vector2 playerPos, float range, int damage) {
                 continue;
             }
 
-            // outros monstros: remove na hora
             if (current->data.life <= 0) {
                 if (prev == NULL) listaDeMonstros = nextNode;
                 else prev->next = nextNode;

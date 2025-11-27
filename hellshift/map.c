@@ -42,14 +42,14 @@ static MonsterType RollBaseEnemyByFloor(int floor) {
 
     if (floor == 2) {
         int r = GetRandomValue(0, 99);
-        return (r < 70) ? MONSTER_SKELETON : MONSTER_SLIME; // 70/30
+        return (r < 70) ? MONSTER_SKELETON : MONSTER_SLIME;
     }
 
     // floor >= 3
     int r = GetRandomValue(0, 99);
-    if (r < 50) return MONSTER_SKELETON; // 50%
-    if (r < 75) return MONSTER_SLIME;    // 25%
-    return MONSTER_ORC;                  // 25%
+    if (r < 50) return MONSTER_SKELETON;
+    if (r < 75) return MONSTER_SLIME;
+    return MONSTER_ORC;
 }
 
 static MonsterType RollEnemyTypeByFloor(int floor) {
@@ -60,17 +60,16 @@ static MonsterType RollEnemyTypeByFloor(int floor) {
     }
 
     if (floor == 2) {
-        // skeleton + slime (slime começa aparecer)
-        return (r < 55) ? MONSTER_SKELETON : MONSTER_SLIME;  // 70/30
+        // skeleton + slime
+        return (r < 55) ? MONSTER_SKELETON : MONSTER_SLIME;
     }
 
-    // floor >= 3: orcs maioria
-    if (r < 60) return MONSTER_ORC;        // 70% orc
-    if (r < 80) return MONSTER_SKELETON;   // 15% esqueleto
-    return MONSTER_SLIME;                 // 15% slime
+    // skeleton + slime + orcs
+    if (r < 60) return MONSTER_ORC;        
+    if (r < 80) return MONSTER_SKELETON;   
+    return MONSTER_SLIME;                 
 }
 
-// Copia a sala atual para map->tiles
 static void LoadRoomToMap(Map *map) {
     Room *r = &map->dungeon.rooms[map->dungeon.currentRoom];
 
@@ -92,7 +91,7 @@ static int FindRoom(Dungeon *d, int gx, int gy) {
     return -1;
 }
 
-// Cria paredes + chão + portas
+// Cria paredes + chão + portas + armadilhas
 static void BuildRoom(Room *r) {
 
     for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -179,7 +178,7 @@ static void BuildRoom(Room *r) {
 }
 
 
-// Gera dungeon ramificada
+// Gera dungeon ramificada 
 static void GenerateDungeon(Dungeon *d) {
 
     d->roomCount = 0;
@@ -370,7 +369,6 @@ static void SpawnRoomEnemies(Map *map) {
         return;
     }
 
-    // se já foi "limpa"/spawnda antes, não faz nada
     if (r->cleared) return;
 
     // sala de boss usa lógica própria
@@ -396,8 +394,6 @@ static void SpawnRoomEnemies(Map *map) {
             tries < 50
         );
 
-        // converte tile -> coordenada do mundo
-        // posição no centro do tile, ajustando pelo tamanho do monstro (30x30)
         float px = MAP_OFFSET_X + tileX * TILE_SIZE + TILE_SIZE/2.0f - 15.0f;
         float py = MAP_OFFSET_Y + tileY * TILE_SIZE + TILE_SIZE/2.0f - 15.0f;
 
@@ -511,7 +507,7 @@ void DrawMap(Map map)
             int t = map.tiles[y][x];
             Rectangle src;
 
-            // 1) PAREDES (usam wallTex)
+            // PAREDES
             if (t >= TILE_WALL_TOP && t <= TILE_WALL_BR)
             {
                 switch (t)
@@ -688,7 +684,7 @@ bool CheckTrapInteraction(Map *map, Vector2 worldPos) {
 }
 
 
-// MUDA DE SALA + SPAWN DE MONSTROS
+// Muda de sala
 void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
 
     char from = ' ';
@@ -717,7 +713,7 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
 
     int nextIndex = -1;
 
-    // Só jogador VIVO pode ativar porta
+    // Só jogador vivo pode passar pela porta
     if (!p1->ghost) {
         if (r->doorRight && p1->position.x > rightLimit) {
             nextIndex = FindRoom(d, r->gridX + 1, r->gridY);
@@ -737,7 +733,7 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
         }
     }
 
-    // Em 2 jogadores, verifica também o P2
+    // Em 2 jogadores verifica também o P2
     if (numPlayers == 2 && nextIndex == -1 && !p2->ghost) {
         if (r->doorRight && p2->position.x > rightLimit) {
             nextIndex = FindRoom(d, r->gridX + 1, r->gridY);
@@ -759,17 +755,17 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
 
     if (nextIndex == -1) return;
 
-    // LIMPA MONSTROS DA SALA ANTERIOR
+    // Limpa os mostro da sala anterios
     UnloadMonsters();
 
-    // TROCA DE SALA
+    // Troca a sala
     d->currentRoom = nextIndex;
     LoadRoomToMap(map);
 
-    //VERIFICA SE JÁ VISITOU A SALA
+    //Vee se já visitou a sala
     d->rooms[d->currentRoom].visited = true;
 
-    // SPAWN DA NOVA SALA
+    // Spawn da nova sala
     Room *newRoom = &d->rooms[d->currentRoom];
 
     newRoom->visited = true;
@@ -787,7 +783,7 @@ void CheckRoomTransition(Map *map, Player *p1, Player *p2, int numPlayers) {
     int midX = (MAP_WIDTH  * TILE_SIZE) / 2;
     int midY = (MAP_HEIGHT * TILE_SIZE) / 2;
 
-    // TELEPORTA OS JOGADORES JUNTOS
+    // Teleporta os jogadores juntos
     if (from == 'R') {
     p1->position = (Vector2){TILE_SIZE * 2, midY};
     if (numPlayers == 2) 

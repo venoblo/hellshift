@@ -6,7 +6,7 @@
 
 struct Player;
 
-// tamanho do mapa (= tamanho de UMA SALA)
+// tamanho do mapa (= tamanho de uma sala)
 #define MAP_WIDTH   20
 #define MAP_HEIGHT  12
 
@@ -90,18 +90,17 @@ typedef struct {
     Room rooms[MAX_ROOMS];
     int roomCount;
     int currentRoom;
-    int floorLevel;   // andar atual (1 - 7)
+    int floorLevel;
 } Dungeon;
 
-// A Struct do Map agora CONTÉM uma dungeon
 typedef struct Map {
     Dungeon dungeon;
-    int tiles[MAP_HEIGHT][MAP_WIDTH]; // espelho da sala atual
+    int tiles[MAP_HEIGHT][MAP_WIDTH];
 } Map;
 
 
 // Funções públicas
-void LoadMap(Map *map, const char *fileName); // AGORA GERA A DUNGEON
+void LoadMap(Map *map, const char *fileName);
 void DrawMap(Map map);
 
 bool CheckMapCollision(Map map, Vector2 worldPos);

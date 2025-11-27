@@ -67,7 +67,7 @@ typedef enum MonsterType{ // tipos de monstro, se for adicionar um novo monstro 
 typedef struct Monster {
     Vector2 position;
     MonsterType type;
-    SkeletonVariant skelVariant; // só usado se type == MONSTER_SKELETON
+    SkeletonVariant skelVariant; // só usado se type = MONSTER_SKELETON
     OrcVariant orcVariant;
 
     int life;
@@ -77,7 +77,7 @@ typedef struct Monster {
     float activeRange;
     bool isPossessed; 
 
-    // cooldown de ataque (para elite/rider etc.)
+    // cooldown de ataque (para elite/rider)
     float attackCooldown;       // tempo base entre ataques
     float attackCooldownTimer;  // timer atual
 
@@ -100,7 +100,7 @@ typedef struct Monster {
 
 typedef struct MonsterNode {
     Monster data;               // dados do monstro
-    struct MonsterNode *next;   // ponteiro para o próximo nó da lista
+    struct MonsterNode *next;
 } MonsterNode;
 
 MonsterNode* GetClosestMonsterNode(Vector2 pos, float range);

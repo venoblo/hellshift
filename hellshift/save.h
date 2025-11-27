@@ -8,7 +8,7 @@
 
 typedef struct MonsterSaveData {
     Vector2 position;
-    int type; // MonsterType (cast para int)
+    int type;
     int life;
     Color color;
     float speed;
@@ -20,11 +20,11 @@ typedef struct MonsterSaveData {
 
 typedef struct SaveData {
     bool isActive;
-    char saveName[21];      // Nome que você vai digitar
-    char dateBuffer[20];    // Data automática
+    char saveName[21];
+    char dateBuffer[20];
     
     int score;
-    int level; // 0 ou 1
+    int level;
     
     int numPlayers;
     int p1Class;
@@ -33,9 +33,9 @@ typedef struct SaveData {
     int p2Life;
 
     // --- DADOS DOS MONSTROS ---
-    int monsterCount; // Quantos monstros existem neste save
+    int monsterCount; // numero de monstros
     MonsterSaveData monsters[MAX_SAVED_MONSTERS]; // O array de dados
-    bool level1Started; // Para saber se o nível já foi iniciado (evitar respawn duplicado)
+    bool level1Started;
 } SaveData;
 
 void SaveGame(int slot, SaveData data);

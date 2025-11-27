@@ -26,7 +26,7 @@ int GetPlayerMaxFrames(Player p) {
             
         case PLAYER_SPECIAL:
             if (p.playerclass == CLASS_GUERREIRO) return 11;
-            else return 6; // Mago usa 6 (placeholder)
+            else return 6; // Mago usa 6
             
         default: return 1;
     }
@@ -50,12 +50,11 @@ void InitPlayerClassStats(Player *p) {
     p->facingDirection = 1; // virado para direita
     p->isAttacking = false;
 
-    // Lógica SWITCH/CASE para aplicar as estatísticas
     if (p->playerclass == CLASS_GUERREIRO) {
-        // Stats do Guerreiro (Tanque)
+        // Stats do Guerreiro
         p->maxLife = 200;
         p->life = 200;
-        p->speed = 2.0f; // Mais lento
+        p->speed = 2.0f;
 
         p->texIdle    = LoadTexture("resources/characters/warriorp1/Knight-Idle.png");
         p->texWalk    = LoadTexture("resources/characters/warriorp1/Knight-Walk.png");
@@ -103,18 +102,15 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
 
         bool moving = false;
 
-        // Controla o monstro!
         if (IsKeyDown(p->keyUp))    { monstro->data.position.y -= monstro->data.speed; moving = true; }
         if (IsKeyDown(p->keyDown))  { monstro->data.position.y += monstro->data.speed; moving = true; }
         if (IsKeyDown(p->keyLeft))  { monstro->data.position.x -= monstro->data.speed; moving = true; monstro->data.facingDirection = -1; }
         if (IsKeyDown(p->keyRight)) { monstro->data.position.x += monstro->data.speed; moving = true; monstro->data.facingDirection = 1; }
 
-        // Player segue o monstro
         p->position = monstro->data.position;
         p->ghost = true;
 
         // --- ATAQUE MANUAL DO POSSUÍDO ---
-        // --- AÇÃO: despossuir se estiver longe do player vivo e da trap/bomba ---
         if (IsKeyPressed(p->keyAction) && monstro->data.state != MONSTER_DEATH) {
 
 
@@ -142,10 +138,9 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
                 p->currentFrame = 0;
                 p->frameTime = 0.0f;
 
-                return; // sai da possessão neste frame
+                return;
             }
 
-            // se não pode despossuir, então é ataque normal
             if (monstro->data.attackCooldownTimer <= 0.0f) {
                 monstro->data.state = MONSTER_ATTACK;
                 monstro->data.currentFrame = 0;
@@ -154,11 +149,10 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         }
 
 
-        // --- ANIMAÇÃO DO POSSUÍDO (porque UpdateOneMonster é pulado) ---
+        // --- ANIMAÇÃO DO POSSUÍDO ---
         float animSpeed = 0.15f;
         int maxF = 1;
 
-        // baixa cooldown mesmo possuído
         if (monstro->data.attackCooldownTimer > 0) {
             monstro->data.attackCooldownTimer -= GetFrameTime();
             if (monstro->data.attackCooldownTimer < 0) monstro->data.attackCooldownTimer = 0;
@@ -187,14 +181,13 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
             if (monstro->data.currentFrame >= maxF) {
                 monstro->data.currentFrame = 0;
 
-                // se terminou ataque, volta pra walk/idle
                 if (monstro->data.state == MONSTER_ATTACK) {
                     monstro->data.state = moving ? MONSTER_WALK : MONSTER_IDLE;
                 }
             }
         }
 
-        // Se o monstro morrer, expulsa o jogador
+        // Se o monstro morrer o jogador sai
         if (monstro->data.life <= 0) {
             monstro->data.isPossessed = false;   // libera flag
 
@@ -231,13 +224,12 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         p->state = PLAYER_GHOST;
 
         if (IsKeyPressed(p->keyAction)) {
-            // 1. Tenta Possuir
+            // Tenta Possuir
             MonsterNode *alvo = GetClosestMonsterNode(p->position, 50.0f);
             if (alvo != NULL) {
                 p->isPossessing = true;
                 p->possessedMonster = alvo;
                 alvo->data.isPossessed = true;  
-               //diferencia dos outros esqueletos
                 alvo->data.color = ColorAlpha(DARKGRAY, 0.9f);
  
                 return;
@@ -246,7 +238,6 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
             // Tenta Ativar Armadilha
             if (CheckTrapInteraction(map, p->position)) {
                 p->trapActive = true;
-                // "causando dano no jogador que está vivo" -> Ok!
             }
         }    
         return;
@@ -293,7 +284,7 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
 
     // ação jogadores vivos
 
-    if (TryOpenChest(map, p)) // Tenta abrir baú
+    if (TryOpenChest(map, p))
     {
         return;
     }
@@ -304,11 +295,10 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         p->currentFrame = 0;  
         p->frameTime = 0.0f;
         
-        // 1. Ataque Mago (Projétil)
+        // Ataque Mago (Projétil)
         if (p->playerclass == CLASS_MAGO) {
             Vector2 direcaoDoTiro = p->lastMoveDir;
 
-            // segurança: se por algum bug vier zero, atira pra direita
             if (direcaoDoTiro.x == 0.0f && direcaoDoTiro.y == 0.0f) {
                 direcaoDoTiro = (Vector2){1.0f, 0.0f};
             }
@@ -316,12 +306,11 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
             SpawnProjectile(p->position, direcaoDoTiro);
         }
 
-        // 2. Ataque Guerreiro (Melee)
+        // Ataque Guerreiro (Melee)
         else if (p->playerclass == CLASS_GUERREIRO) {
             float alcanceEspada = 100.0f;
-            int dano = 100; 
+            int dano = 20; 
             
-            // Chama a função que criamos no monster.c
             int pontos = CheckMeleeAttack(p->position, alcanceEspada, dano);
             
             p->score += pontos; // Soma a pontuação
@@ -338,7 +327,6 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
         }
     }
     
-    // O "Ticker" (Relógio da Animação)
     p->frameTime += GetFrameTime();
     
     // Velocidade da animação
@@ -353,25 +341,21 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
 
     if (p->frameTime >= currentSpeed) {
         p->frameTime = 0.0f;
-        p->currentFrame++; // Passa para a próxima "foto"
-        
-        // Aqui precisamos saber o limite de frames.
-        // Como simplificação, vamos pegar os valores do Guerreiro que você me passou:
+        p->currentFrame++;
+
         int maxFrames = 0;
         switch(p->state) {
             case PLAYER_IDLE: maxFrames = 6; break;
             case PLAYER_WALK: maxFrames = 8; break;
             case PLAYER_ATTACK: maxFrames = 7; break;
-            case PLAYER_SPECIAL: maxFrames = 11; break; // Adicionei Special se tiver
+            case PLAYER_SPECIAL: maxFrames = 11; break;
             case PLAYER_HURT: maxFrames = 4; break;
             case PLAYER_DEATH: maxFrames = 4; break;
             case PLAYER_REBIRTH: maxFrames = 4; break;
             default: maxFrames = 4; break;
         }
-        // Se passou do último frame
         if (p->currentFrame >= maxFrames) {
             
-            // 1. SEQUÊNCIA DE MORTE
             if (p->state == PLAYER_DEATH) {
                 p->state = PLAYER_REBIRTH; 
                 p->currentFrame = 0; 
@@ -383,7 +367,6 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
                 p->currentFrame = 0;
             }
             
-            // 2. FIM DE ATAQUE OU DANO
             else if (p->state == PLAYER_ATTACK || p->state == PLAYER_HURT) {
                 p->currentFrame = 0;
                 
@@ -391,11 +374,11 @@ void UpdatePlayer(Player *p, Map *map, Player *other) { //aqui são funções do
                 if (p->life <= 0) {
                     p->state = PLAYER_DEATH;
                 } else {
-                    p->state = PLAYER_IDLE; // Só volta ao normal se tiver vida
+                    p->state = PLAYER_IDLE;
                 }
             }
             else {
-                p->currentFrame = 0; // Loop normal
+                p->currentFrame = 0;
             }
         }
     }
@@ -431,7 +414,7 @@ void DrawPlayer(Player p) {
 
    // --- fantasma ---
     
-    // --- GUERREIRO ---
+    // --- Guerreiro ---
     
     Texture2D texToDraw;
     int maxFrames = 1;
@@ -450,7 +433,6 @@ void DrawPlayer(Player p) {
         case PLAYER_REBIRTH:    
             texToDraw = p.texDeath;   
             stateName = "REBIRTH";
-            // flipar
             {
                 int max = GetPlayerMaxFrames(p);
 
@@ -464,11 +446,8 @@ void DrawPlayer(Player p) {
         default:                texToDraw = p.texIdle;    break;
     }
 
-    // --- VERIFICAÇÃO DE DEBUG (Corrigida) ---
     bool textureFailed = (texToDraw.id <= 0);
     
-    // Desenha um quadrado de fundo SE estiver morrendo ou renascendo
-    // Isso prova que o código entrou no estado certo
     if (p.state == PLAYER_DEATH || p.state == PLAYER_REBIRTH) {
         DrawRectangle(p.position.x - 20, p.position.y - 20, 40, 40, RED);
         DrawText(stateName, p.position.x, p.position.y - 50, 10, YELLOW);
@@ -480,7 +459,7 @@ void DrawPlayer(Player p) {
     Rectangle sourceRec = { 
         frameWidth * frameToDraw,  
         0.0f,                             
-        frameWidth * p.facingDirection,   // multiplica por -1 negativa para flipar para esq
+        frameWidth * p.facingDirection,
         (float)texToDraw.height           
     };
 
@@ -511,7 +490,6 @@ void DrawPlayer(Player p) {
         }
     }
 
-    // DESENHO FINAL
     DrawTexturePro(texToDraw, sourceRec, destRec, origin, 0.0f, drawColor);
 
 

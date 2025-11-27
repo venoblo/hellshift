@@ -39,8 +39,8 @@ typedef struct Player{
     float damageCooldown;
     bool ready;
     float attackTimer;
-    bool isPossessing;          // ta possuindo alguém?
-    void *possessedMonster;     // ponteiro para o monstro (void* para evitar ciclo, cast no .c)
+    bool isPossessing;
+    void *possessedMonster;
     bool trapActive;
 
     // sprites e animação
@@ -52,10 +52,10 @@ typedef struct Player{
     Texture2D texDeath;
 
     // controle de Animação
-    PlayerAnimState state;   // ação (andando, parado...)
-    float frameTime;         // contador de tempo para trocar frame
+    PlayerAnimState state;
+    float frameTime;
     int currentFrame;        
-    int facingDirection;     // 1 = Direita, (para splitar) -1 = Esquerda
+    int facingDirection;
     Vector2 lastMoveDir; 
     bool isAttacking;        
 } Player;
