@@ -11,7 +11,10 @@
 Texture2D texMenuBg;
 Texture2D texMenuLogo;
 Texture2D texStoryBg;
+Music soundtrack;
 Font fontMenu;
+
+
 
 typedef enum GameScreen { 
     SCREEN_MAIN_MENU,
@@ -155,6 +158,14 @@ int main(void)
     LoadMap(&mapa, "level1.txt");
     SetTargetFPS(60); 
     SetExitKey(0); 
+    InitAudioDevice();  
+
+    soundtrack = LoadMusicStream("resources/soundtrack/hellshift.mp3");
+
+    soundtrack.looping = true;   //loop
+    SetMusicVolume(soundtrack, 0.6f); 
+
+    PlayMusicStream(soundtrack);      
 
     texMenuBg   = LoadTexture("resources/menu/masmorra-fundo.png");
     texMenuLogo = LoadTexture("resources/menu/HELLSHIFTLOGO.png");
@@ -166,7 +177,8 @@ int main(void)
 
     while (!WindowShouldClose())
     {
-        // lógica
+        UpdateMusicStream(soundtrack);
+
         
         if (currentScreen == SCREEN_MAIN_MENU) {
             if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) mainMenuSelection--;
@@ -990,6 +1002,9 @@ int main(void)
     UnloadTexture(texStoryBg); 
     UnloadMonsters();
     UnloadProjectiles();
+    StopMusicStream(soundtrack);
+    UnloadMusicStream(soundtrack);
+    CloseAudioDevice();
     CloseWindow(); 
     return 0;
 }
