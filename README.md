@@ -10,6 +10,7 @@ A sequir estão instruções sobre implementação e uso so sistema para poder e
   2) Tenha um compilador C com a biblioteca Raylib configurada:
      - Caso não tenha um compilador instalado, acesse: https://www.msys2.org/
      - Instale o MSYS2 na sua maquina
+     - Procure a pasta MSYS2 que acabou de instalar e a abra
      - Abra o MSYS2 MinGW64
      - Isso vai abrir um terminal MinGW64, coloque o seguinte comando nele: pacman -S mingw-w64-x86_64-raylib
      - Isso instala a biblioteca Raylib
