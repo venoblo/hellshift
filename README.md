@@ -51,3 +51,27 @@ A sequir estão instruções sobre implementação e uso so sistema para poder e
 
 
 (Para Linux/WSL)======================================================
+1) Ter estes pré-requisitos:
+   1.1) Caso seja WSL:
+     - Windows com WSL2 instalado (de preferência Windows 11 com suporte a GUI – WSLg)
+      - Distribuição Ubuntu instalada no WSL
+   Linux e wsl:
+    - Instalar dependências: 
+    sudo apt update
+    sudo apt install build-essential git cmake pkg-config
+    sudo apt install libraylib-dev
+
+2)  Baixe o repositorio GitHub:
+     - Baixe ou clone o repositório codigo do git em forma de arquivo ZIP e em seguida o abra em algum lugar da sua maquina (Ex: Área de Trabalho)
+
+
+3) Compile e rode o jogo:
+   - No terminal, conferir se está na pasta correta usando "cd hellshift"
+   - Executar make clean
+   - Executar make run
+   - Abrirá uma janela com o jogo
+   - Tentar zerar o jogo!
+  
+obs: Nosso Makefile identifica o sistema (Linux/Mac) e roda automaticamente a versão correta!
+    
+    
